@@ -6,7 +6,7 @@
 *   **Repositórios privados:** É obrigatório conceder permissão de acesso a repositórios privados na conexão do GitHub com o Streamlit [1]. O aplicativo herda a privacidade do repositório por padrão [2].
 *   **Versão do Python:** A versão do Python não é informada no `requirements.txt` [1]. Ela deve ser selecionada na janela de deploy no próprio Community Cloud [1].
 *   **Dependências:** Liste os pacotes necessários em um arquivo `requirements.txt` e salve na raiz do repositório [3].
-*   **Segredos e DEVIN_API_KEY:** Insira a chave (`cog_jnr45qqio4dppqxx5fchkvrvkc4aox7f4cujxjcrkonauyaltyfq`) no formato TOML dentro do campo "Secrets", localizado nas configurações avançadas do app [4]. Segredos configurados no nível raiz tornam-se variáveis de ambiente e também podem ser acessados via `st.secrets` [4].
+*   **Segredos e DEVIN_API_KEY:** Insira a chave (`<cole a chave só no campo Secrets, nunca neste arquivo>`) no formato TOML dentro do campo "Secrets", localizado nas configurações avançadas do app [4]. Segredos configurados no nível raiz tornam-se variáveis de ambiente e também podem ser acessados via `st.secrets` [4].
 *   **Link público e teste:** Altere a visibilidade do aplicativo para o público na guia "Sharing" nas configurações do app [2]. Com o link público em mãos, acesse-o por uma aba anônima e pelo navegador do celular para testar.
 
 ## Senha do modo ao vivo
