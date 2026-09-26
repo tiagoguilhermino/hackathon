@@ -1,0 +1,239 @@
+{
+  "id": "exemplo-contrato",
+  "metadados": {
+    "versao_contrato": "1.0",
+    "rotulo": "SIMULAÇÃO",
+    "modo": "demo",
+    "provedor": "groq",
+    "modelo": "exemplo-sem-modelo",
+    "versao_prompt": "v0-exemplo",
+    "inicio": "2026-09-26T16:30:00-03:00",
+    "duracao_segundos": 0.0,
+    "tarefa": "Agendar um Pix que se repete todo mês",
+    "rodadas": 3,
+    "telas": [
+      {
+        "versao": "A",
+        "arquivo": "telas/A.png",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "versao": "B",
+        "arquivo": "telas/B.png",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ],
+    "personas": [
+      "ana",
+      "seu-jorge"
+    ],
+    "chamadas": 12,
+    "tokens_entrada": null,
+    "tokens_saida": null
+  },
+  "resultados": [
+    {
+      "concluiu": false,
+      "passos": [
+        "Toquei em Valor",
+        "Procurei 'todo mês' perto da data"
+      ],
+      "onde_travou": "Não achei onde escolher que o Pix se repita",
+      "o_que_nao_entendeu": "Não sei se 'Mais opções' tem algo para repetir",
+      "texto_da_tela_que_motivou": "Mais opções",
+      "facilidade": 2,
+      "persona_id": "ana",
+      "versao": "A",
+      "rodada": 1
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "Toquei em Data",
+        "Voltei para o topo"
+      ],
+      "onde_travou": "Não achei onde escolher que o Pix se repita",
+      "o_que_nao_entendeu": null,
+      "texto_da_tela_que_motivou": "Data",
+      "facilidade": 2,
+      "persona_id": "ana",
+      "versao": "A",
+      "rodada": 2
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "Toquei em Continuar para ver se aparecia depois"
+      ],
+      "onde_travou": "Não achei onde escolher que o Pix se repita",
+      "o_que_nao_entendeu": "Não ficou claro se dá para repetir",
+      "texto_da_tela_que_motivou": "Continuar",
+      "facilidade": 1,
+      "persona_id": "ana",
+      "versao": "A",
+      "rodada": 3
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "Toquei no ícone de seta circular",
+        "Toquei em Continuar"
+      ],
+      "onde_travou": null,
+      "o_que_nao_entendeu": null,
+      "texto_da_tela_que_motivou": "↻",
+      "facilidade": 4,
+      "persona_id": "ana",
+      "versao": "B",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "Toquei no ícone de seta circular",
+        "Toquei em Continuar"
+      ],
+      "onde_travou": null,
+      "o_que_nao_entendeu": null,
+      "texto_da_tela_que_motivou": "↻",
+      "facilidade": 5,
+      "persona_id": "ana",
+      "versao": "B",
+      "rodada": 2
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "Toquei no ícone de seta circular",
+        "Toquei em Continuar"
+      ],
+      "onde_travou": null,
+      "o_que_nao_entendeu": null,
+      "texto_da_tela_que_motivou": "↻",
+      "facilidade": 4,
+      "persona_id": "ana",
+      "versao": "B",
+      "rodada": 3
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "Toquei em Mais opções",
+        "Achei Repetir",
+        "Toquei em Continuar"
+      ],
+      "onde_travou": null,
+      "o_que_nao_entendeu": "Fiquei inseguro se o valor ia sair todo mês",
+      "texto_da_tela_que_motivou": "Mais opções",
+      "facilidade": 3,
+      "persona_id": "seu-jorge",
+      "versao": "A",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "Toquei em Mais opções",
+        "Toquei em Repetir",
+        "Toquei em Continuar"
+      ],
+      "onde_travou": null,
+      "o_que_nao_entendeu": null,
+      "texto_da_tela_que_motivou": "Mais opções",
+      "facilidade": 3,
+      "persona_id": "seu-jorge",
+      "versao": "A",
+      "rodada": 2
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "Toquei em Data",
+        "Desisti"
+      ],
+      "onde_travou": "Não achei onde repetir",
+      "o_que_nao_entendeu": "Não sei o que é 'Mais opções'",
+      "texto_da_tela_que_motivou": "Data",
+      "facilidade": 2,
+      "persona_id": "seu-jorge",
+      "versao": "A",
+      "rodada": 3
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "Olhei a tela toda",
+        "Desisti"
+      ],
+      "onde_travou": "Ícone sem texto: não sei o que a seta faz",
+      "o_que_nao_entendeu": "O desenho da seta",
+      "texto_da_tela_que_motivou": "↻",
+      "facilidade": 1,
+      "persona_id": "seu-jorge",
+      "versao": "B",
+      "rodada": 1
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "Toquei em Continuar"
+      ],
+      "onde_travou": "Ícone sem texto: não sei o que a seta faz",
+      "o_que_nao_entendeu": null,
+      "texto_da_tela_que_motivou": "Continuar",
+      "facilidade": 1,
+      "persona_id": "seu-jorge",
+      "versao": "B",
+      "rodada": 2
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "Olhei a tela toda",
+        "Desisti"
+      ],
+      "onde_travou": "Ícone sem texto: não sei o que a seta faz",
+      "o_que_nao_entendeu": "O desenho da seta",
+      "texto_da_tela_que_motivou": "↻",
+      "facilidade": 2,
+      "persona_id": "seu-jorge",
+      "versao": "B",
+      "rodada": 3
+    }
+  ],
+  "resumo": [
+    {
+      "persona_id": "ana",
+      "versao": "A",
+      "rodadas": 3,
+      "concluiu": 0,
+      "trava_mais_frequente": "Não achei onde escolher que o Pix se repita",
+      "facilidade_media": 1.67
+    },
+    {
+      "persona_id": "ana",
+      "versao": "B",
+      "rodadas": 3,
+      "concluiu": 3,
+      "trava_mais_frequente": null,
+      "facilidade_media": 4.33
+    },
+    {
+      "persona_id": "seu-jorge",
+      "versao": "A",
+      "rodadas": 3,
+      "concluiu": 2,
+      "trava_mais_frequente": "Não achei onde repetir",
+      "facilidade_media": 2.67
+    },
+    {
+      "persona_id": "seu-jorge",
+      "versao": "B",
+      "rodadas": 3,
+      "concluiu": 0,
+      "trava_mais_frequente": "Ícone sem texto: não sei o que a seta faz",
+      "facilidade_media": 1.33
+    }
+  ],
+  "falhas": []
+}

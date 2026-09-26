@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/output/**)",
+      "WebSearch",
+      "WebFetch",
+      "Bash(python3 scripts/sincronizar_agentes.py *)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(mv *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(sudo *)",
+      "Bash(git push *)",
+      "Edit(/input/**)",
+      "Edit(/pdf/**)",
+      "Edit(/scripts/**)",
+      "Edit(/.claude/**)",
+      "Edit(/.agents/**)"
+    ]
+  }
+}

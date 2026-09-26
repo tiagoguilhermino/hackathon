@@ -1,0 +1,18 @@
+PASS: 8/8 · FAIL: 0/8 | Rodada: 1
+ENCAMINHAMENTO: APROVADO
+
+## Detalhe por item
+| # | Item | Resultado | Evidência |
+|---|---|---|---|
+| 1 | Todo [n] tem fonte | PASSA | Extraídos todos os `[n]` citados no corpo (Resumo executivo, Tabela unificada, Divergências, Hipóteses, Mapa, Lacunas): variam de `[1]` a `[95]`, todos dentro do intervalo coberto pela `## Fontes` (95 entradas numeradas sequencialmente, linhas 190-284). Nenhum número citado fora desse intervalo. |
+| 2 | Nenhuma fonte perdida | PASSA | Contagem por arquivo de origem: 01=9, 02=12, 03=6, 04=12, 05=9, 06=11, 07=9, 08=16, 09=12 fontes = 96 brutas. `00-consolidado.md` tem 95 entradas porque a MPI v2.10.0 (03·[2] e 08·[8], mesma URL `.../II_ManualdePadroesparaIniciacaodoPix.pdf`) foi corretamente mesclada na entrada 23, com `origem:` listando ambos. Título e URL de cada entrada de origem conferidos e batem com o consolidado, arquivo a arquivo. |
+| 3 | Toda célula com respaldo | PASSA | Todas as 60 linhas U01–U60 da `## Tabela unificada` têm a coluna "Fontes" preenchida com `[n]` e a coluna "O que o conjunto diz" termina com citação(ões) `[n]` correspondente(s); nenhuma célula de conteúdo factual ficou em branco sem `[n]` nem `—`. |
+| 4 | Divergências preservadas | PASSA | As 9 divergências numéricas/regulatórias dos arquivos de origem (spec legada x atual e enum 17x18 em 01; tipo double/string em 02; % nuvem em 04; AA-H x 3 estágios e data R$200 em 06; base de clientes 70Mx100M e faixas Uniclass/Personnalité em 07; resolução BCB x Reclame Aqui em 09; domínio "tipo de conta" entre 01/03/06) aparecem todas em `## Divergências` (linhas 78-91), cada uma com Lado A e Lado B citados. |
+| 5 | Lacunas de origem presentes | PASSA | Contagem de linhas de `## Lacunas de verificação` por origem bate exatamente com o número de lacunas de cada arquivo NN: 01=6, 02=6, 03=7, 04=6, 05=6, 06=6, 07=7, 08=7, 09=5 (total 56), mais linhas adicionais com origem "consolidação" para achados só visíveis ao comparar os 9 arquivos. |
+| 6 | Tipo preservado | PASSA | HIPÓTESE do BIAN (08·[71]) mantida como HIPÓTESE em U56 e no Resumo executivo. A previsão de guidance 2026 do Itaú (embutida como EVIDÊNCIA dentro de um achado de 07) foi corretamente isolada em `## Hipóteses a testar` como HIPÓTESE (previsão), e não aparece em U41 nem no Resumo executivo. Nenhum SIMULAÇÃO presente nos 9 arquivos a checar. |
+| 7 | Ganho com IA não só de fornecedor | PASSA | Única afirmação de ganho de IA (Iara, redução de 44% no custo de processamento, U53) cita fonte `[35]` = TI Inside Online, classificada `[IMPRENSA]` em 04 e no consolidado, não `[FORNECEDOR]`. Nenhuma outra afirmação de ganho de tempo/produtividade/qualidade com IA localizada no documento. |
+| 8 | Publicável | PASSA | Nenhum dado pessoal real encontrado: o único CPF citado é o exemplo mascarado oficial do manual do DICT (`***.777.888-**`, U15), formato demonstrativo público, não pessoa real. Todo o conteúdo vem de normas do BCB, SEC filings, blogs institucionais públicos do Itaú e specs públicas do Open Finance — nada marcado como interno/confidencial, sem senha ou chave. |
+
+Nenhum item falhou nesta rodada.
+
+Arquivos revisados: `/Users/raphael_dopaso/Downloads/Anki/dist-amigo/Hackathon Itau/output/00-consolidado.md`, `/Users/raphael_dopaso/Downloads/Anki/dist-amigo/Hackathon Itau/output/01-open-finance-cadastro-contas.md`, `.../02-open-finance-credito-cartao-invest.md`, `.../03-pix-pagamentos.md`, `.../04-arquitetura-dados-itau.md`, `.../05-privacidade-categorias-dados.md`, `.../06-dados-regulatorios-bcb.md`, `.../07-numeros-carteira-itau.md`, `.../08-modelos-referencia-dados-bancarios.md`, `.../09-dados-feedbacks-reclamacoes.md`.
