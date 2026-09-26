@@ -1,12 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowDownLeft,
+  ArrowLeft,
   ArrowRight,
+  Barcode,
   Bell,
+  Building2,
+  Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   CircleHelp,
+  Copy,
   CreditCard,
+  Download,
   Eye,
   EyeOff,
   FileText,
@@ -14,17 +21,20 @@ import {
   HandCoins,
   Home,
   Lightbulb,
+  Lock,
   MessageCircle,
   MoreHorizontal,
   PiggyBank,
   QrCode,
   ReceiptText,
+  Repeat,
   Search,
   Send,
   ShieldCheck,
   Smartphone,
   Sparkles,
   UserRound,
+  Users,
   X,
   Zap,
   type LucideIcon,
@@ -57,20 +67,20 @@ type Shortcut = {
   tone?: "primary" | "neutral";
 };
 
-const shortcuts: Shortcut[] = [
-  { label: "Pix", icon: QrCode, tone: "primary" },
-  { label: "Pagar", icon: ReceiptText },
-  { label: "Transferir", icon: Send },
-  { label: "Depositar", icon: ArrowDownLeft },
-  { label: "Recarga", icon: Smartphone },
-  { label: "Empréstimos", icon: HandCoins },
-];
-
 const navItems = [
   { label: "Início", icon: Home },
   { label: "Extrato", icon: FileText },
   { label: "Cartões", icon: CreditCard },
   { label: "Benefícios", icon: Gift },
+];
+
+const mockContacts = [
+  { name: "Ana Paula Souza", key: "(11) 98765-4321", bank: "Banco Lume" },
+  { name: "Marcos Oliveira", key: "(11) 97654-3210", bank: "Itaú Unibanco" },
+  { name: "Juliana Lima", key: "(21) 99876-5432", bank: "Nubank" },
+  { name: "Carlos Eduardo", key: "(31) 98123-4567", bank: "Bradesco" },
+  { name: "Fernanda Costa", key: "(41) 99112-2334", bank: "Banco do Brasil" },
+  { name: "Roberto Santos", key: "(81) 98877-6655", bank: "Santander" },
 ];
 
 function formatCurrency(value: number) {
@@ -87,8 +97,161 @@ function Index() {
   const [showSearch, setShowSearch] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
 
+  // VERSÃO GERAL DA DASHBOARD (V1 VS V2)
+  const [dashVersion, setDashVersion] = useState<"v1" | "v2">("v2");
+
+  // MODO DE FLUXO DO PIX (FLUXO 1 VS FLUXO 2)
+  const [pixFlowMode, setPixFlowMode] = useState<"fluxo1" | "fluxo2">("fluxo2");
+
+  // ESTADOS DO PIX
+  const [showPixModal, setShowPixModal] = useState(false);
+  const [pixStep, setPixStep] = useState<"hub" | "qrcode" | "key_entry" | "form" | "confirm" | "my_key">("hub");
+  const [pixVersion, setPixVersion] = useState<"A" | "B" | "C">("A");
+  const [showMenuA, setShowMenuA] = useState(false);
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
+
+  // DADOS DO DESTINATÁRIO
+  const [recipientName, setRecipientName] = useState("Ana Paula Souza");
+  const [recipientKey, setRecipientKey] = useState("(11) 98765-4321");
+  const [recipientBank, setRecipientBank] = useState("Banco Lume");
+
+  // DADOS DA TRANSAÇÃO PIX
+  const [manualKeyInput, setManualKeyInput] = useState("");
+  const [copiaColaInput, setCopiaColaInput] = useState("");
+  const [pixAmount, setPixAmount] = useState("250,00");
+  const [pixDescription, setPixDescription] = useState("");
+
+  // ESTADOS DE DEPÓSITO / BOLETO
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositStep, setDepositStep] = useState<"options" | "pix_me" | "boleto_form" | "boleto_generated" | "portabilidade">("options");
+  const [depositAmount, setDepositAmount] = useState("100,00");
+  const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
+
+  const shortcuts: Shortcut[] = dashVersion === "v1"
+    ? [
+        { label: "Pix", icon: QrCode, tone: "primary" },
+        { label: "Pagar", icon: ReceiptText },
+        { label: "Transferir", icon: Send },
+        { label: "Depositar", icon: ArrowDownLeft },
+        { label: "Recarga", icon: Smartphone },
+        { label: "Empréstimos", icon: HandCoins },
+      ]
+    : [
+        { label: "Pix", icon: QrCode, tone: "primary" },
+        { label: "Pagar", icon: ReceiptText },
+        { label: "Transferir", icon: Send },
+        { label: "Boleto", icon: Barcode },
+        { label: "Recarga", icon: Smartphone },
+        { label: "Empréstimos", icon: HandCoins },
+      ];
+
+  const openPixModal = () => {
+    setSelectedShortcut("Pix");
+    setPixStep("hub");
+    setShowPixModal(true);
+  };
+
+  const openDepositModal = () => {
+    setSelectedShortcut("Depositar");
+    setDepositStep("options");
+    setShowDepositModal(true);
+  };
+
+  const openBoletoModal = () => {
+    setSelectedShortcut("Boleto");
+    setDepositStep("boleto_form");
+    setShowDepositModal(true);
+  };
+
+  const selectContact = (contact: (typeof mockContacts)[0]) => {
+    setRecipientName(contact.name);
+    setRecipientKey(contact.key);
+    setRecipientBank(contact.bank);
+    setPixStep("form");
+  };
+
+  const handleManualKeySubmit = (keyText: string) => {
+    if (!keyText || keyText.trim() === "") return;
+
+    if (keyText.toLowerCase().includes("000201") || keyText.length > 25) {
+      setRecipientName("Supermercado Exemplo LTDA");
+      setRecipientKey(keyText.slice(0, 22) + "...");
+      setRecipientBank("Banco Lume");
+      setPixAmount("148,90");
+    } else {
+      setRecipientName("Contato Consultado da Base");
+      setRecipientKey(keyText);
+      setRecipientBank("Banco Lume");
+    }
+    setPixStep("form");
+  };
+
+  const handleCopyCode = (codeText: string, label: string) => {
+    navigator.clipboard?.writeText?.(codeText);
+    setCopiedNotification(label);
+    setTimeout(() => setCopiedNotification(null), 3000);
+  };
+
+  const handleDownloadPdf = () => {
+    const textContent = `================================================
+BANCO LUME - BOLETO BANCÁRIO
+================================================
+Beneficiário: Raphael (Sua Conta Lume)
+Valor: R$ ${depositAmount}
+Vencimento: Em 3 dias úteis
+Linha Digitável: 34191.09008 61234.567890 12345.678901 8 98760000010000
+Status: Aguardando Pagamento
+================================================`;
+    
+    const blob = new Blob([textContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Boleto_Lume_R$${depositAmount.replace(",", ".")}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    handleCopyCode("", "PDF_DOWNLOADED");
+  };
+
+  const filteredContacts = mockContacts.filter(
+    (c) =>
+      c.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+      c.key.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+      c.bank.toLowerCase().includes(contactSearchQuery.toLowerCase())
+  );
+
   return (
     <main className="min-h-screen bg-canvas pb-28 text-foreground lg:pb-10">
+      {/* BARRA SUPERIOR DE VERSÕES DA DASHBOARD */}
+      <div className="bg-black/90 text-white px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-bold uppercase tracking-wider text-highlight">Versão do App:</span>
+          <span className="text-gray-300">
+            {dashVersion === "v1" ? "Dash V1 (Depositar + Pix no Depósito)" : "Dash V2 (Boleto no lugar de Depositar + Minha Chave no Pix)"}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-md">
+          <button
+            type="button"
+            onClick={() => setDashVersion("v1")}
+            className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v1" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
+          >
+            Dash Versão 1
+          </button>
+          <button
+            type="button"
+            onClick={() => setDashVersion("v2")}
+            className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v2" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
+          >
+            Dash Versão 2 (Nova)
+          </button>
+        </div>
+      </div>
+
+      {/* HEADER PRINCIPAL */}
       <header className="bg-primary text-primary-foreground">
         <div className="mx-auto max-w-6xl px-5 pb-12 pt-6 sm:px-8 lg:pb-20 lg:pt-8">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
@@ -199,6 +362,7 @@ function Index() {
         </div>
       </header>
 
+      {/* DASHBOARD PRINCIPAL */}
       <div className="mx-auto max-w-6xl px-4 sm:px-8">
         <section className="relative -mt-7 lg:-mt-11" aria-label="Acessos rápidos">
           <div className="overflow-hidden rounded-lg bg-surface shadow-card">
@@ -207,7 +371,12 @@ function Index() {
                 <button
                   key={label}
                   type="button"
-                  onClick={() => setSelectedShortcut(label)}
+                  onClick={() => {
+                    if (label === "Pix") openPixModal();
+                    else if (label === "Depositar") openDepositModal();
+                    else if (label === "Boleto") openBoletoModal();
+                    else setSelectedShortcut(label);
+                  }}
                   className={`group flex min-h-24 flex-col items-center justify-center gap-2 border-border px-2 py-4 text-xs font-semibold transition hover:bg-muted focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary ${index > 3 ? "hidden lg:flex" : ""}`}
                 >
                   <span
@@ -220,7 +389,7 @@ function Index() {
               ))}
             </div>
           </div>
-          {selectedShortcut && (
+          {selectedShortcut && !showPixModal && !showDepositModal && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3 text-sm shadow-sm">
               <p className="min-w-0 truncate">
                 <span className="font-bold">{selectedShortcut}</span> selecionado
@@ -337,6 +506,914 @@ function Index() {
         </div>
       </div>
 
+      {/* AMBIENTE DE PIX */}
+      {showPixModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* BARRA SUPERIOR DE CONTROLE DO HACKATHON */}
+            <div className="bg-primary px-5 py-3 text-primary-foreground border-b border-primary-foreground/20">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary-foreground/80">
+                    Modo de Teste da Vila (Hackathon Itaú)
+                  </p>
+                  <p className="text-[10px] text-primary-foreground/60">
+                    {pixFlowMode === "fluxo1" ? "Fluxo 1: Com Contatos Frequentes" : "Fluxo 2: Entrada Manual e Copia e Cola Destacado"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1 rounded-md bg-primary-strong p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPixFlowMode("fluxo1");
+                      setPixStep("hub");
+                    }}
+                    className={`rounded px-2 py-1 text-[11px] font-bold transition ${pixFlowMode === "fluxo1" ? "bg-accent text-accent-foreground shadow-xs" : "text-primary-foreground/80 hover:bg-primary-soft"}`}
+                  >
+                    Fluxo 1 (Contatos)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPixFlowMode("fluxo2");
+                      setPixStep("hub");
+                    }}
+                    className={`rounded px-2 py-1 text-[11px] font-bold transition ${pixFlowMode === "fluxo2" ? "bg-accent text-accent-foreground shadow-xs" : "text-primary-foreground/80 hover:bg-primary-soft"}`}
+                  >
+                    Fluxo 2 (Manual & Copia)
+                  </button>
+                </div>
+              </div>
+
+              {pixStep === "confirm" && (
+                <div className="mt-3 pt-2 border-t border-primary-foreground/15 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-primary-foreground/75 uppercase">
+                    Variação da Recorrência:
+                  </span>
+                  <div className="flex items-center gap-1 rounded bg-primary-strong p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPixVersion("A");
+                        setShowMenuA(false);
+                      }}
+                      className={`rounded px-2 py-0.5 text-xs font-bold transition ${pixVersion === "A" ? "bg-accent text-accent-foreground shadow-xs" : "text-primary-foreground/80"}`}
+                    >
+                      Versão A
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPixVersion("B");
+                        setShowMenuA(false);
+                      }}
+                      className={`rounded px-2 py-0.5 text-xs font-bold transition ${pixVersion === "B" ? "bg-accent text-accent-foreground shadow-xs" : "text-primary-foreground/80"}`}
+                    >
+                      Versão B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPixVersion("C");
+                        setShowMenuA(false);
+                      }}
+                      className={`rounded px-2 py-0.5 text-xs font-bold transition ${pixVersion === "C" ? "bg-accent text-accent-foreground shadow-xs" : "text-primary-foreground/80"}`}
+                    >
+                      Versão C
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* HEADER DO MODAL */}
+            <div className="flex items-center justify-between border-b border-border p-5">
+              <div className="flex items-center gap-3">
+                {pixStep !== "hub" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pixStep === "confirm") setPixStep("form");
+                      else setPixStep("hub");
+                    }}
+                    className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold">
+                    {pixStep === "hub" && "Área Pix"}
+                    {pixStep === "qrcode" && "Leitor de QR Code"}
+                    {pixStep === "key_entry" && "Digitar Chave Pix"}
+                    {pixStep === "my_key" && "Minhas Chaves & QR Code (Receber)"}
+                    {pixStep === "form" && "Valores da Transação"}
+                    {pixStep === "confirm" && "Confirmar Pix"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {pixStep === "hub" && (pixFlowMode === "fluxo1" ? "Escolha a forma de transferência ou selecione um contato" : "Cole o código Pix Copia e Cola ou informe a chave manualmente")}
+                    {pixStep === "qrcode" && "Aproxime a câmera do código QR"}
+                    {pixStep === "key_entry" && "Digite o número de celular, CPF ou e-mail"}
+                    {pixStep === "my_key" && "Consulte e compartilhe suas chaves ou QR Code para receber valores"}
+                    {pixStep === "form" && "Informe o valor em R$ para a transferência"}
+                    {pixStep === "confirm" && "Confirme os dados antes de enviar"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPixModal(false)}
+                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {copiedNotification && (
+              <div className="bg-accent text-accent-foreground px-4 py-2 text-center text-xs font-bold animate-in fade-in">
+                ✓ {copiedNotification} copiado com sucesso!
+              </div>
+            )}
+
+            {/* FLUXO 1: HUB DO PIX */}
+            {pixStep === "hub" && pixFlowMode === "fluxo1" && (
+              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPixStep("key_entry")}
+                    className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-canvas p-4 text-center hover:bg-muted hover:border-primary/40 transition shadow-xs"
+                  >
+                    <span className="grid h-11 w-11 place-items-center rounded-full bg-accent text-accent-foreground">
+                      <Send size={20} />
+                    </span>
+                    <div>
+                      <span className="block text-xs font-bold text-foreground">Chave Pix</span>
+                      <span className="block text-[10px] text-muted-foreground mt-0.5">Celular ou CPF</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPixStep("qrcode")}
+                    className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-canvas p-4 text-center hover:bg-muted hover:border-primary/40 transition shadow-xs"
+                  >
+                    <span className="grid h-11 w-11 place-items-center rounded-full bg-primary/10 text-primary">
+                      <QrCode size={20} />
+                    </span>
+                    <div>
+                      <span className="block text-xs font-bold text-foreground">Ler QR Code</span>
+                      <span className="block text-[10px] text-muted-foreground mt-0.5">Usar a câmera</span>
+                    </div>
+                  </button>
+
+                  {/* NA DASH V2: EXIBIR BOTÃO "MINHAS CHAVES & QR CODE" DENTRO DO PIX */}
+                  {dashVersion === "v2" && (
+                    <button
+                      type="button"
+                      onClick={() => setPixStep("my_key")}
+                      className="col-span-2 sm:col-span-1 flex flex-col items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 p-4 text-center hover:bg-primary/10 transition shadow-xs"
+                    >
+                      <span className="grid h-11 w-11 place-items-center rounded-full bg-primary text-primary-foreground">
+                        <Copy size={20} />
+                      </span>
+                      <div>
+                        <span className="block text-xs font-bold text-foreground">Minhas Chaves & QR</span>
+                        <span className="block text-[10px] text-muted-foreground mt-0.5">Receber na minha conta</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <Users size={16} /> Contatos Guardados (Protegidos)
+                    </span>
+                    <span className="text-xs text-muted-foreground">{filteredContacts.length} encontrados</span>
+                  </div>
+
+                  <div className="relative">
+                    <Search size={17} className="absolute left-3.5 top-3 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nome ou celular..."
+                      value={contactSearchQuery}
+                      onChange={(e) => setContactSearchQuery(e.target.value)}
+                      className="w-full rounded-md border border-border bg-canvas pl-10 pr-4 py-2 text-sm outline-hidden focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="divide-y divide-border rounded-lg border border-border bg-canvas max-h-56 overflow-y-auto">
+                    {filteredContacts.map((contact) => (
+                      <button
+                        key={contact.name}
+                        type="button"
+                        onClick={() => selectContact(contact)}
+                        className="flex w-full items-center justify-between p-3.5 text-left hover:bg-muted transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 font-bold text-primary text-xs">
+                            {contact.name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <div>
+                            <p className="text-sm font-bold text-foreground">{contact.name}</p>
+                            <p className="text-xs text-muted-foreground">Celular: {contact.key} • {contact.bank}</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={18} className="text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* FLUXO 2: PIX COPIA E COLA DESTACADO */}
+            {pixStep === "hub" && pixFlowMode === "fluxo2" && (
+              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                {/* BOTÃO "MINHAS CHAVES & QR CODE" NA V2 DENTRO DO PIX */}
+                {dashVersion === "v2" && (
+                  <button
+                    type="button"
+                    onClick={() => setPixStep("my_key")}
+                    className="w-full flex items-center justify-between p-4 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/15 transition text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
+                        <Copy size={20} />
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Minhas Chaves & QR Code (Receber)</p>
+                        <p className="text-xs text-muted-foreground">Ver chaves Pix (E-mail, Aleatória) e QR Code próprio</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-primary" />
+                  </button>
+                )}
+
+                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5 space-y-3 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
+                      <Copy size={21} />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">Pix Copia e Cola</h3>
+                      <p className="text-xs text-muted-foreground">Cole o código Pix fornecido para pagar diretamente</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <textarea
+                      rows={3}
+                      placeholder="Cole aqui o código longo do Pix Copia e Cola (ex: 000201265800...)"
+                      value={copiaColaInput}
+                      onChange={(e) => setCopiaColaInput(e.target.value)}
+                      className="w-full rounded-md border border-border bg-surface p-3 text-xs font-mono outline-hidden focus:border-primary"
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCopiaColaInput("00020126580014br.gov.bcb.pix.copiaecola.lojaexemplo.987")}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-md hover:bg-primary/20 transition"
+                      >
+                        <Copy size={13} /> Simular Colar Código
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleManualKeySubmit(copiaColaInput || "00020126580014br.gov.bcb.pix.copiaecola.lojaexemplo.987")}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition shadow-xs"
+                      >
+                        Continuar com Copia e Cola <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-canvas p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Send size={18} className="text-muted-foreground" />
+                    <h3 className="text-sm font-bold text-foreground">Transferir por Chave Pix</h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-muted-foreground">
+                      Digite o número de celular, CPF ou e-mail manualmente:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ex: (11) 99999-8888 ou chave@email.com"
+                        value={manualKeyInput}
+                        onChange={(e) => setManualKeyInput(e.target.value)}
+                        className="w-full rounded-md border border-border bg-surface px-4 py-2.5 text-sm outline-hidden focus:border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleManualKeySubmit(manualKeyInput)}
+                        className="rounded-md bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition"
+                      >
+                        Consultar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPixStep("qrcode")}
+                  className="w-full flex items-center justify-between p-4 rounded-xl border border-border bg-canvas hover:bg-muted transition text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <QrCode size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Usar Câmera (QR Code)</p>
+                      <p className="text-xs text-muted-foreground">Escanear código impresso ou em outra tela</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={18} className="text-muted-foreground" />
+                </button>
+              </div>
+            )}
+
+            {/* MINHAS CHAVES & GERADOR DE QR CODE DA CONTA (COMPLETO) */}
+            {pixStep === "my_key" && (
+              <div className="p-6 space-y-5 text-center max-h-[80vh] overflow-y-auto">
+                {/* QR CODE PRÓPRIO GERADO DA CONTA LUME */}
+                <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Seu QR Code Pix (Conta Lume)
+                  </p>
+                  
+                  <div className="mx-auto grid h-44 w-44 place-items-center rounded-xl border-4 border-primary bg-white p-2 shadow-md">
+                    <QrCode size={140} className="text-primary" />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Mostre este QR Code para quem vai te pagar presencialmente.
+                  </p>
+                </div>
+
+                {/* OPÇÕES DE CHAVES DE RECEBIMENTO (E-MAIL E CHAVE ALEATÓRIA) */}
+                <div className="space-y-3 text-left">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Suas Chaves Pix para Compartilhar
+                  </p>
+
+                  {/* CHAVE 1: E-MAIL */}
+                  <div className="rounded-lg bg-canvas border border-border p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground block">Chave E-mail</span>
+                      <span className="font-mono text-xs font-bold text-foreground">raphael.lume@pix.com.br</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode("raphael.lume@pix.com.br", "Chave E-mail")}
+                      className="inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition"
+                    >
+                      <Copy size={13} /> Copiar
+                    </button>
+                  </div>
+
+                  {/* CHAVE 2: ALEATÓRIA */}
+                  <div className="rounded-lg bg-canvas border border-border p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground block">Chave Aleatória (EVP)</span>
+                      <span className="font-mono text-xs font-bold text-foreground truncate block max-w-[200px] sm:max-w-[280px]">
+                        d83a9f12-4c2b-4e89-b701-9a2e3f456789
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode("d83a9f12-4c2b-4e89-b701-9a2e3f456789", "Chave Aleatória")}
+                      className="inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition"
+                    >
+                      <Copy size={13} /> Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TELA DE SCANNER DE QR CODE */}
+            {pixStep === "qrcode" && (
+              <div className="p-6 space-y-6 text-center">
+                <div className="relative mx-auto flex h-64 w-64 items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-black/90 p-4 shadow-inner overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-transparent to-primary/20 animate-pulse" />
+                  <div className="z-10 flex flex-col items-center gap-3 text-white">
+                    <Camera size={38} className="text-highlight animate-bounce" />
+                    <p className="text-xs font-semibold px-4">Aproxime o QR Code do centro do quadrado</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecipientName("Restaurante & Café Lume");
+                      setRecipientKey("00020126580014br.gov.bcb.pix.qrcode.123");
+                      setRecipientBank("Banco Lume");
+                      setPixAmount("64,50");
+                      setPixDescription("Almoço executivo");
+                      setPixStep("form");
+                    }}
+                    className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                  >
+                    <CheckCircle2 size={18} /> Simular Leitura do QR Code (R$ 64,50)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TELA DE DIGITAR CHAVE PIX */}
+            {pixStep === "key_entry" && (
+              <div className="p-6 space-y-5">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Informe a Chave Pix manualmente
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Digite o celular (11) 9xxxx-xxxx, CPF ou e-mail..."
+                    value={manualKeyInput}
+                    onChange={(e) => setManualKeyInput(e.target.value)}
+                    className="w-full rounded-md border border-border bg-canvas px-4 py-3 text-sm font-medium outline-hidden focus:border-primary"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Após informar a chave, consultaremos a base de dados para buscar o destinatário.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleManualKeySubmit(manualKeyInput)}
+                  className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                >
+                  Consultar Dados <ArrowRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {/* PASSO FORM */}
+            {pixStep === "form" && (
+              <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+                <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Lock size={13} /> Dados do Destinatário (Base Protegida)
+                    </span>
+                    <span className="text-[11px] text-primary font-semibold">Consultado</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nome completo</p>
+                    <p className="text-sm font-bold text-foreground">{recipientName}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Chave / Identificador</p>
+                      <p className="font-semibold text-foreground truncate">{recipientKey}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Instituição</p>
+                      <p className="font-semibold text-foreground">{recipientBank}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                      Valor da Transferência (R$)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-2.5 font-bold text-muted-foreground">R$</span>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={pixAmount}
+                        onChange={(e) => setPixAmount(e.target.value)}
+                        className="w-full rounded-md border border-border bg-canvas pl-12 pr-4 py-2.5 text-lg font-bold outline-hidden focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                      Mensagem / Descrição (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Aluguel, Almoço..."
+                      value={pixDescription}
+                      onChange={(e) => setPixDescription(e.target.value)}
+                      className="w-full rounded-md border border-border bg-canvas px-4 py-2.5 text-sm outline-hidden focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPixStep("confirm")}
+                  className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                >
+                  Revisar Transação <ArrowRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {pixStep === "confirm" && (
+              <div className="p-6 space-y-6">
+                <div className="relative rounded-lg border border-border bg-canvas p-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Destinatário</p>
+                      <p className="text-base font-bold text-foreground">{recipientName}</p>
+                      <p className="text-xs text-muted-foreground">Celular: {recipientKey} • {recipientBank}</p>
+                    </div>
+
+                    {pixVersion === "A" && (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          aria-label="Mais opções"
+                          onClick={() => setShowMenuA((prev) => !prev)}
+                          className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted transition"
+                        >
+                          <MoreHorizontal size={20} />
+                        </button>
+                        {showMenuA && (
+                          <div className="absolute right-0 top-10 z-20 w-48 rounded-md border border-border bg-surface p-1 shadow-lg text-xs font-semibold animate-in fade-in">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded px-3 py-2 text-left hover:bg-muted"
+                              onClick={() => alert("Pix agendado para repetir mensalmente!")}
+                            >
+                              <Repeat size={14} /> Repetir todo mês
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded px-3 py-2 text-left hover:bg-muted text-muted-foreground"
+                            >
+                              Salvar contato
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {pixVersion === "B" && (
+                      <button
+                        type="button"
+                        aria-label="Repetir este Pix"
+                        title="Repetir este Pix"
+                        onClick={() => alert("Pix agendado para repetir mensalmente!")}
+                        className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-accent-foreground shadow-xs hover:bg-accent transition"
+                      >
+                        <Repeat size={19} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-border flex items-end justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Valor a transferir</p>
+                      <p className="font-display text-2xl font-bold text-foreground">R$ {pixAmount}</p>
+                      {pixDescription && (
+                        <p className="text-xs text-muted-foreground mt-1">Obs: "{pixDescription}"</p>
+                      )}
+                    </div>
+                    <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-bold text-accent-foreground">
+                      Pix Instantâneo
+                    </span>
+                  </div>
+                </div>
+
+                {pixVersion === "C" && (
+                  <div className="rounded-lg border border-accent/40 bg-accent/10 p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-accent-foreground">
+                        <Repeat size={18} />
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Deseja automatizar?</p>
+                        <p className="text-xs text-muted-foreground">Repita este mesmo valor todos os meses.</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => alert("Pix agendado para repetir mensalmente!")}
+                      className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-xs font-bold text-accent-foreground shadow-xs hover:opacity-90 transition"
+                    >
+                      <Repeat size={14} /> Repetir todo mês
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      alert(`Pix de R$ ${pixAmount} para ${recipientName} realizado com sucesso!`);
+                      setShowPixModal(false);
+                    }}
+                    className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                  >
+                    <CheckCircle2 size={20} /> Confirmar e Enviar R$ {pixAmount}
+                  </button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Transação fictícia de teste protegida pelo Banco Lume
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AMBIENTE COMPLETO DE DEPÓSITO OU BOLETO (EQUIVALÊNCIA TOTAL V1 E V2) */}
+      {showDepositModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* HEADER DO MODAL */}
+            <div className="flex items-center justify-between border-b border-border p-5">
+              <div className="flex items-center gap-3">
+                {depositStep !== "options" && dashVersion === "v1" && (
+                  <button
+                    type="button"
+                    onClick={() => setDepositStep("options")}
+                    className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold">
+                    {dashVersion === "v1" ? "Depositar na Conta Lume" : "Boletos Bancários (Conta Lume)"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {dashVersion === "v1" && depositStep === "options" && "Escolha como deseja colocar dinheiro na sua conta"}
+                    {dashVersion === "v1" && depositStep === "pix_me" && "Ver chaves Pix (E-mail, Aleatória) e QR Code da conta"}
+                    {depositStep === "boleto_form" && "Informe o valor para gerar o boleto sem taxas"}
+                    {depositStep === "boleto_generated" && "Boleto bancário gerado com sucesso"}
+                    {depositStep === "portabilidade" && "Traga seu salário para o Banco Lume"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDepositModal(false)}
+                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {copiedNotification && (
+              <div className="bg-accent text-accent-foreground px-4 py-2 text-center text-xs font-bold animate-in fade-in">
+                {copiedNotification === "PDF_DOWNLOADED"
+                  ? "✓ Download do Boleto em PDF iniciado!"
+                  : `✓ ${copiedNotification} copiado com sucesso!`}
+              </div>
+            )}
+
+            {/* FLUXO DA V1: OPÇÕES DE DEPÓSITO */}
+            {depositStep === "options" && dashVersion === "v1" && (
+              <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => setDepositStep("pix_me")}
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-canvas p-4 text-left hover:bg-muted hover:border-primary/40 transition shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="grid h-11 w-11 place-items-center rounded-full bg-accent text-accent-foreground">
+                      <QrCode size={21} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Depositar via Pix (Minhas Chaves & QR Code)</p>
+                      <p className="text-xs text-muted-foreground">Ver chaves Pix (E-mail, Aleatória) e QR Code próprio</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={19} className="text-muted-foreground" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDepositStep("boleto_form")}
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-canvas p-4 text-left hover:bg-muted hover:border-primary/40 transition shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="grid h-11 w-11 place-items-center rounded-full bg-primary/10 text-primary">
+                      <Barcode size={21} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Depositar via Boleto</p>
+                      <p className="text-xs text-muted-foreground">Gere um boleto grátis e pague onde quiser (1 a 3 dias úteis)</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={19} className="text-muted-foreground" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDepositStep("portabilidade")}
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-canvas p-4 text-left hover:bg-muted hover:border-primary/40 transition shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="grid h-11 w-11 place-items-center rounded-full bg-secondary/20 text-secondary-foreground">
+                      <Building2 size={21} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Trazer meu Salário</p>
+                      <p className="text-xs text-muted-foreground">Solicite a portabilidade de salário sem sair de casa</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={19} className="text-muted-foreground" />
+                </button>
+              </div>
+            )}
+
+            {/* PIX ME DA V1 (IGUALMENTE COMPLETO COM QR CODE E CHAVE ALEATÓRIA) */}
+            {depositStep === "pix_me" && dashVersion === "v1" && (
+              <div className="p-6 space-y-5 text-center max-h-[80vh] overflow-y-auto">
+                <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Seu QR Code Pix (Conta Lume)
+                  </p>
+                  
+                  <div className="mx-auto grid h-44 w-44 place-items-center rounded-xl border-4 border-primary bg-white p-2 shadow-md">
+                    <QrCode size={140} className="text-primary" />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Mostre este QR Code para quem vai te pagar presencialmente.
+                  </p>
+                </div>
+
+                <div className="space-y-3 text-left">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Suas Chaves Pix para Compartilhar
+                  </p>
+
+                  <div className="rounded-lg bg-canvas border border-border p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground block">Chave E-mail</span>
+                      <span className="font-mono text-xs font-bold text-foreground">raphael.lume@pix.com.br</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode("raphael.lume@pix.com.br", "Chave E-mail")}
+                      className="inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition"
+                    >
+                      <Copy size={13} /> Copiar
+                    </button>
+                  </div>
+
+                  <div className="rounded-lg bg-canvas border border-border p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground block">Chave Aleatória (EVP)</span>
+                      <span className="font-mono text-xs font-bold text-foreground truncate block max-w-[200px] sm:max-w-[280px]">
+                        d83a9f12-4c2b-4e89-b701-9a2e3f456789
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode("d83a9f12-4c2b-4e89-b701-9a2e3f456789", "Chave Aleatória")}
+                      className="inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition"
+                    >
+                      <Copy size={13} /> Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO: FORMULÁRIO DO BOLETO */}
+            {depositStep === "boleto_form" && (
+              <div className="p-6 space-y-5">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Qual o valor do boleto? (R$)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3 font-bold text-muted-foreground">R$</span>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      className="w-full rounded-md border border-border bg-canvas pl-12 pr-4 py-3 text-xl font-bold outline-hidden focus:border-primary"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Valor mínimo: R$ 20,00 • Sem qualquer taxa de emissão.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDepositStep("boleto_generated")}
+                  className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                >
+                  Gerar Boleto de R$ {depositAmount} <ArrowRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {/* PASSO: BOLETO GERADO */}
+            {depositStep === "boleto_generated" && (
+              <div className="p-6 space-y-5 text-center">
+                <div className="rounded-xl border border-border bg-canvas p-5 space-y-4">
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent/20 text-accent-foreground">
+                    <CheckCircle2 size={26} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Boleto de R$ {depositAmount} Gerado</h3>
+                    <p className="text-xs text-muted-foreground">Vencimento em 3 dias úteis • Banco Lume</p>
+                  </div>
+
+                  <div className="rounded-lg bg-surface border border-border p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Barcode size={15} /> Código do Boleto
+                      </span>
+                      <span className="text-[10px] text-accent-foreground font-bold bg-accent/20 px-2 py-0.5 rounded">
+                        Copia e Cola
+                      </span>
+                    </div>
+
+                    <p className="font-mono text-xs font-bold text-foreground break-all bg-canvas p-2.5 rounded border border-border select-all">
+                      34191.09008 61234.567890 12345.678901 8 98760000010000
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode("34191090086123456789012345678901898760000010000", "Código do Boleto")}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary-strong transition shadow-xs"
+                      >
+                        <Copy size={14} /> Copiar Código
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadPdf}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-canvas px-3 py-2.5 text-xs font-bold text-foreground hover:bg-muted transition shadow-xs"
+                      >
+                        <Download size={14} /> Baixar PDF
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDepositModal(false)}
+                  className="w-full flex h-11 items-center justify-center rounded-lg border border-border bg-canvas text-sm font-bold text-foreground hover:bg-muted transition"
+                >
+                  Concluir
+                </button>
+              </div>
+            )}
+
+            {/* PORTABILIDADE */}
+            {depositStep === "portabilidade" && (
+              <div className="p-6 space-y-5">
+                <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
+                  <h3 className="text-base font-bold text-foreground">Portabilidade de Salário</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Traga o recebimento do seu salário mensal para o Banco Lume sem pagar taxas adicionais.
+                  </p>
+                  <div className="space-y-2 pt-2">
+                    <label className="block text-xs font-semibold text-muted-foreground">
+                      CNPJ do seu Empregador:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="00.000.000/0001-00"
+                      className="w-full rounded-md border border-border bg-surface px-4 py-2 text-sm outline-hidden focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    alert("Solicitação de portabilidade enviada!");
+                    setShowDepositModal(false);
+                  }}
+                  className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                >
+                  Solicitar Portabilidade <CheckCircle2 size={18} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* BOTÃO FLUTUANTE DE NAVEGAÇÃO MOBILE */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden" aria-label="Navegação principal">
         <div className="mx-auto grid max-w-lg grid-cols-5 items-end">
           {navItems.slice(0, 2).map((item) => (
@@ -344,7 +1421,7 @@ function Index() {
           ))}
           <button
             type="button"
-            onClick={() => setSelectedShortcut("Pix")}
+            onClick={openPixModal}
             className="mx-auto -mt-7 flex h-14 w-14 flex-col items-center justify-center rounded-full bg-accent text-accent-foreground shadow-float transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label="Abrir Pix"
           >
