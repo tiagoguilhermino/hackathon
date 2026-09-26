@@ -1,4 +1,7 @@
-streamlit>=1.50,<2
-pydantic>=2.7,<3
-python-dotenv>=1.0,<2
-groq>=1.0,<2
+streamlit>=1.64
+pydantic>=2.13
+python-dotenv>=1.2
+anthropic>=1.8
+groq>=1.0
+pillow>=12
+truststore>=0.10

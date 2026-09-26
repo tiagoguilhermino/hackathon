@@ -1,0 +1,44 @@
+{
+  "versao_anterior": "A",
+  "versao_nova": "B",
+  "data_simulacao": "2026-09-26T12:00:00Z",
+  "rotulo": "SIMULAÇÃO",
+  "resultados_por_persona": [
+    {
+      "persona": "Dona Maria",
+      "antes": {
+        "concluiu": 1,
+        "de_total": 3,
+        "apontamentos": [
+          "Não entendeu que 'Mais opções' escondia a função repetir."
+        ]
+      },
+      "depois": {
+        "concluiu": 3,
+        "de_total": 3,
+        "apontamentos": [
+          "Achou o ícone rapidamente."
+        ]
+      },
+      "avaliacao_sinal": "melhorou"
+    },
+    {
+      "persona": "Jovem Tech",
+      "antes": {
+        "concluiu": 3,
+        "de_total": 3,
+        "apontamentos": [
+          "Achou rapidamente, mas achou o caminho longo."
+        ]
+      },
+      "depois": {
+        "concluiu": 3,
+        "de_total": 3,
+        "apontamentos": [
+          "Gostou da facilidade do ícone direto."
+        ]
+      },
+      "avaliacao_sinal": "sinal fraco"
+    }
+  ]
+}
