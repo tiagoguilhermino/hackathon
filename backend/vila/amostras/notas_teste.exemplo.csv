@@ -1,0 +1,5 @@
+participante;versao;ordem;achou;primeiro_toque;tempo_s;dificuldade;comentario;duracao_sessao_min
+EX1;A;1;não;Data do pagamento;41;não viu Mais opções;EXEMPLO FICTÍCIO para o autoteste;12
+EX1;B;2;sim;ícone ao lado da data;18;;EXEMPLO FICTÍCIO para o autoteste;12
+EX2;B;1;não;Continuar;35;ícone sem texto;EXEMPLO FICTÍCIO para o autoteste;10
+EX2;A;2;sim;Mais opções;22;;EXEMPLO FICTÍCIO para o autoteste;10

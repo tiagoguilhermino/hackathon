@@ -1,0 +1,51 @@
+{
+  "versao": "provisoria-m1",
+  "origem": "Rascunho do M1 a partir das sugestões do plano (Ana, Seu Jorge, Carla, Marcos). Substituir pelo texto aprovado do M3 (H2): cole o texto e peça 'Converta estas personas em dados/personas.json', mantendo os mesmos campos.",
+  "aviso": "Personas fictícias, descritas por comportamento. Não representam clientes reais.",
+  "personas": [
+    {
+      "id": "ana",
+      "nome": "Ana",
+      "idade": 19,
+      "resumo": "Estudante que faz trabalhos por aplicativo; a renda muda de um mês para o outro. Resolve tudo pelo celular e usa Pix várias vezes por semana.",
+      "familiaridade_digital": "Alta. Usa vários aplicativos por dia, toca rápido, passa os olhos pelo texto e costuma tentar ícones e menus para ver o que acontece.",
+      "contexto_de_uso": "Só tem o celular, um modelo de entrada com tela pequena. Usa na rua, no ônibus, com uma mão só e com pressa.",
+      "acessibilidade": "Sem necessidades específicas.",
+      "objetivo": "Deixar a parte fixa da mensalidade do curso paga todo mês sem ter que lembrar.",
+      "medo": "Ficar sem saldo no dia do débito e pagar juros ou tarifa."
+    },
+    {
+      "id": "jorge",
+      "nome": "Seu Jorge",
+      "idade": 67,
+      "resumo": "Aposentado. Começou a usar o aplicativo do banco há pouco tempo, depois que a agência perto de casa fechou. Faz Pix com cuidado e às vezes pede ajuda à filha.",
+      "familiaridade_digital": "Baixa. Usa bem o WhatsApp e consulta o saldo, mas lê cada tela com calma e evita tocar em algo quando não sabe o que vai acontecer. Segue o que está escrito com clareza na tela.",
+      "contexto_de_uso": "Em casa, sentado, com o celular apoiado na mesa e óculos de leitura. Não tem pressa, mas tem receio de errar.",
+      "acessibilidade": "Presbiopia corrigida com óculos; letras muito pequenas cansam a vista.",
+      "objetivo": "Mandar todo mês a mesada do neto que estuda em outra cidade sem precisar pedir ajuda.",
+      "medo": "Tocar no lugar errado e mandar dinheiro para a pessoa errada ou em dobro."
+    },
+    {
+      "id": "carla",
+      "nome": "Carla",
+      "idade": 34,
+      "resumo": "Trabalha por conta própria com um pequeno salão. Paga aluguel do espaço e fornecedores por Pix e controla tudo pelo celular.",
+      "familiaridade_digital": "Média para alta. Usa o aplicativo do banco todos os dias para receber e pagar, mas não gosta de explorar: quer achar a função rápido.",
+      "contexto_de_uso": "Entre um atendimento e outro, com pouco tempo e muitas interrupções.",
+      "acessibilidade": "Sem necessidades específicas.",
+      "objetivo": "Automatizar o pagamento do aluguel do salão para não atrasar em meses corridos.",
+      "medo": "Esquecer um pagamento e ficar com o nome sujo ou pagar multa."
+    },
+    {
+      "id": "marcos",
+      "nome": "Marcos",
+      "idade": 45,
+      "resumo": "Professor. Paga as contas da casa pelo aplicativo do banco e já está acostumado com Pix.",
+      "familiaridade_digital": "Média. Usa o aplicativo com frequência, mas prefere caminhos que já conhece.",
+      "contexto_de_uso": "Em casa, com o celular configurado com letra grande e, às vezes, com a lupa (ampliação) do sistema.",
+      "acessibilidade": "Baixa visão. Ícones pequenos sem texto e elementos com pouco contraste são difíceis de identificar; depende de rótulos escritos e lê devagar textos pequenos.",
+      "objetivo": "Deixar programada a transferência mensal para a conta da mãe.",
+      "medo": "Confirmar algo sem conseguir ler direito o que estava aceitando."
+    }
+  ]
+}
