@@ -2,18 +2,26 @@
 
 import streamlit as st
 import json
-from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
 from painel import textos
+from painel.decisoes import OPCOES, QUEM, Decisao, RegistroIlegivel, acrescentar, agora, ler_decisoes
 from painel.diagnostico import diagnosticar
 from painel.leitura import ler_persona
-from vila.motor import ARQ_DEMO, carregar_demo, listar_simulacoes, mensagem_de_erro, simular_vila
+from vila.motor import ARQ_DEMO, carregar_demo, carregar_personas, listar_simulacoes, mensagem_de_erro, simular_vila
 
 load_dotenv()
 
 st.set_page_config(page_title=textos.TITULO_PAGINA, page_icon="🏘️", layout="wide")
+
+PASTA_TELAS = Path(__file__).parent / "telas"
+ROTULO_LEITURA = {
+    "melhorou": textos.LEITURA_MELHOROU,
+    "piorou": textos.LEITURA_PIOROU,
+    "sinal fraco": textos.LEITURA_SINAL_FRACO,
+    "incompleto": textos.LEITURA_INCOMPLETO,
+}
 
 
 def guardar_resultado(sim):
@@ -33,28 +41,65 @@ def rotulo_salvo(caminho: Path) -> str:
     return f"{caminho.name} · telas {versoes} · {horario} · {modo}"
 
 
+def apontamento(data, antes, depois) -> str:
+    """O que a vila apontou para uma persona nas duas versões (vai para o registro da decisão)."""
+    partes = [
+        f"{versao}: travou em {agg['trava_mais_frequente']}"
+        for versao, agg in ((antes, data["A"]), (depois, data["B"]))
+        if agg and agg["trava_mais_frequente"]
+    ]
+    return " · ".join(partes) or textos.APONTAMENTO_NENHUM
+
+
 st.info(textos.AVISO_FIXO, icon="🧪")
 st.title(textos.TITULO)
 st.write(textos.SUBTITULO)
 
+try:
+    todas_personas = carregar_personas()
+except Exception as e:
+    st.error(textos.PERSONAS_ERRO.format(erro=mensagem_de_erro(e)))
+    todas_personas = []
+nomes_personas = {p.id: p.nome for p in todas_personas}
+
 st.header("1 · Entrada")
 tarefa = st.text_input("Qual tarefa o cliente quer fazer?", value="agendar um Pix que se repete todo mês")
+ids_personas = st.multiselect(
+    textos.ENTRADA_PERSONAS, list(nomes_personas), default=list(nomes_personas), format_func=nomes_personas.get
+)
+
+telas_prontas = sorted(p.stem for p in PASTA_TELAS.glob("*.png"))
+origens = [textos.ORIGEM_PRONTAS, textos.ORIGEM_UPLOAD] if len(telas_prontas) >= 2 else [textos.ORIGEM_UPLOAD]
+origem = st.radio(textos.ENTRADA_ORIGEM, origens, horizontal=True)
 
 col_a, col_b = st.columns(2)
-with col_a:
-    nome_a = st.text_input("Nome da 1ª versão", value="A")
-    img_a = st.file_uploader(f"Imagem da versão {nome_a}", type=["png", "jpg", "jpeg"], key="img_a")
-    if img_a:
-        st.image(img_a, caption=f"Versão {nome_a}")
+if origem == textos.ORIGEM_PRONTAS:
+    with col_a:
+        nome_a = st.selectbox(textos.TELA_ANTES, telas_prontas, index=0)
+        tela_a = PASTA_TELAS / f"{nome_a}.png"
+        st.image(str(tela_a), caption=f"Versão {nome_a}", width=260)
+    with col_b:
+        nome_b = st.selectbox(textos.TELA_DEPOIS, telas_prontas, index=1)
+        tela_b = PASTA_TELAS / f"{nome_b}.png"
+        st.image(str(tela_b), caption=f"Versão {nome_b}", width=260)
+else:
+    with col_a:
+        nome_a = st.text_input("Nome da 1ª versão", value="A")
+        tela_a = st.file_uploader(f"Imagem da versão {nome_a}", type=["png", "jpg", "jpeg"], key="img_a")
+        if tela_a:
+            st.image(tela_a, caption=f"Versão {nome_a}", width=260)
+    with col_b:
+        nome_b = st.text_input("Nome da 2ª versão", value="B")
+        tela_b = st.file_uploader(f"Imagem da versão {nome_b}", type=["png", "jpg", "jpeg"], key="img_b")
+        if tela_b:
+            st.image(tela_b, caption=f"Versão {nome_b}", width=260)
 
-with col_b:
-    nome_b = st.text_input("Nome da 2ª versão", value="B")
-    img_b = st.file_uploader(f"Imagem da versão {nome_b}", type=["png", "jpg", "jpeg"], key="img_b")
-    if img_b:
-        st.image(img_b, caption=f"Versão {nome_b}")
+st.caption(textos.ESTIMATIVA.format(n=len(ids_personas) * 2 * 3, p=len(ids_personas)))
 
 if st.button("Simular com a IA"):
-    if not (img_a and img_b):
+    if not ids_personas:
+        st.error(textos.SEM_PERSONAS)
+    elif not (tela_a and tela_b):
         st.error("Faça o upload das duas versões para simular.")
     elif nome_a == nome_b:
         st.error("As versões precisam ter nomes diferentes.")
@@ -65,7 +110,10 @@ if st.button("Simular com a IA"):
             progress_bar.progress(feitas / total, text=f"Simulando rodadas ({feitas}/{total})...")
 
         try:
-            sim = simular_vila(img_a, img_b, tarefa=tarefa, rodadas=3, versoes=(nome_a, nome_b), progresso=update_progress, offline=False)
+            sim = simular_vila(
+                tela_a, tela_b, tarefa=tarefa, personas=ids_personas, rodadas=3,
+                versoes=(nome_a, nome_b), progresso=update_progress, offline=False,
+            )
             guardar_resultado(sim)
         except Exception as e:
             st.error(mensagem_de_erro(e))
@@ -97,6 +145,8 @@ if st.session_state.get("simulando") and "sim_resultado" in st.session_state:
             horario=meta["horario_inicio"][:16].replace("T", " "),
             modelo=meta["modelo"],
         ))
+    with st.expander(textos.COMO_LER_TITULO):
+        st.markdown(textos.COMO_LER)
 
     # As versões vêm do próprio resultado (um arquivo salvo pode ter A, B e C).
     versoes = [t["versao"] for t in meta["telas"]]
@@ -163,38 +213,57 @@ if st.session_state.get("simulando") and "sim_resultado" in st.session_state:
                 st.caption(textos.LEITURA_INCOMPLETO_DETALHE)
         st.divider()
 
-    st.header("3 & 4 · Revisão humana e registro")
-    with st.form("form_decisao"):
-        decisao = st.selectbox("O que fazer com estes apontamentos?", ["levar ao teste real", "descartar", "já corrigido"])
-        comentario = st.text_area("Comentário")
+    if personas:
+        st.header("3 & 4 · Revisão humana e registro")
+        st.caption(textos.REVISAO_AJUDA)
+        with st.form("form_decisao"):
+            quem = st.radio(textos.DECISAO_QUEM, QUEM, horizontal=True)
+            escolhas = {}
+            for pid, data in personas.items():
+                leitura_p = ler_persona(data["A"], data["B"])
+                apontado = apontamento(data, antes, depois)
+                st.markdown(f"**{data['nome']}** · {ROTULO_LEITURA[leitura_p]} · {apontado}")
+                c_dec, c_com = st.columns([1, 2])
+                decisao = c_dec.selectbox(textos.DECISAO_ESCOLHA, (textos.SEM_DECISAO, *OPCOES), key=f"decisao_{pid}")
+                comentario = c_com.text_input(textos.DECISAO_COMENTARIO, key=f"comentario_{pid}")
+                escolhas[pid] = (decisao, comentario, leitura_p, apontado)
 
-        if st.form_submit_button("Salvar decisão"):
-            decisoes_file = Path(__file__).parent / "resultados" / "decisoes.json"
-            decisoes_file.parent.mkdir(parents=True, exist_ok=True)
+            if st.form_submit_button(textos.DECISAO_BOTAO):
+                novas = [
+                    Decisao(
+                        horario=agora(), quem=quem, simulacao_id=sim_data["id"], persona_id=pid,
+                        comparacao=f"{antes} → {depois}", leitura=leitura_p, apontamento=apontado,
+                        decisao=decisao, comentario=comentario.strip(),
+                    )
+                    for pid, (decisao, comentario, leitura_p, apontado) in escolhas.items()
+                    if decisao != textos.SEM_DECISAO
+                ]
+                if not novas:
+                    st.warning(textos.DECISAO_NENHUMA)
+                else:
+                    try:
+                        total = acrescentar(novas)
+                        st.success(textos.DECISAO_SALVA.format(n=len(novas), total=total))
+                    except RegistroIlegivel as e:
+                        st.error(textos.REGISTRO_ILEGIVEL.format(erro=e))
 
-            nova_decisao = {
-                "timestamp": datetime.now().isoformat(),
-                "decisao": decisao,
-                "comentario": comentario,
-                "tarefa": tarefa,
-                "versoes": f"{antes} -> {depois}"
-            }
-
-            lista_decisoes = []
-            if decisoes_file.exists():
-                try:
-                    lista_decisoes = json.loads(decisoes_file.read_text())
-                except:
-                    pass
-
-            lista_decisoes.append(nova_decisao)
-            decisoes_file.write_text(json.dumps(lista_decisoes, indent=2))
-            st.success("Decisão salva com sucesso!")
-
-            with st.expander("Histórico de decisões", expanded=True):
-                for d in reversed(lista_decisoes):
-                    st.write(f"**{d['timestamp']}** - {d['decisao']} ({d.get('versoes', '')})")
-                    st.write(f"_{d['comentario']}_")
+# O histórico aparece sempre, mesmo antes de simular.
+st.header(textos.HISTORICO_TITULO)
+try:
+    registros = ler_decisoes()
+except RegistroIlegivel as e:
+    st.error(textos.REGISTRO_ILEGIVEL.format(erro=e))
+    registros = []
+if not registros:
+    st.caption(textos.HISTORICO_VAZIO)
+for r in reversed(registros[-50:]):
+    horario = str(r.get("horario", r.get("timestamp", "")))[:16].replace("T", " ")
+    persona = nomes_personas.get(r.get("persona_id"), r.get("persona_id", "—"))
+    st.markdown(
+        f"**{horario}** · {r.get('quem', '—')} · {persona} · {r.get('comparacao', r.get('versoes', ''))} · "
+        f"{r.get('leitura', '')} → **{r.get('decisao', '')}**  \n"
+        f"{r.get('comentario', '')}  \n`{r.get('simulacao_id', '')}`"
+    )
 
 with st.sidebar:
     st.caption(textos.AVISO_FIXO)

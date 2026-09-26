@@ -14,7 +14,8 @@ No papel dessa persona, a IA diz onde tocaria, passo a passo, onde hesitaria ou 
 texto da tela guiou cada decisão, sempre no mesmo formato. Ela vê só a imagem, não o aplicativo, e
 não recebe a resposta certa. Como as respostas variam, cada persona tenta 3 vezes cada versão; o
 painel mostra quantas vezes ela concluiu (por exemplo, "concluiu 2 de 3") e onde mais travou. As
-24 tentativas rodam ao mesmo tempo e levaram 0 s.
+[NÚMERO DE TENTATIVAS] tentativas rodam uma de cada vez (limite do plano gratuito da Groq) e levaram
+[TEMPO MEDIDO].
 
 ## Principal risco e controle (bloco 5, P4)
 
@@ -22,7 +23,7 @@ O principal risco é tratar a vila como se fosse gente de verdade: a IA pode apo
 pessoas não têm (alarmes falsos), deixar passar problemas reais (pontos cegos) e reduzir pessoas a
 estereótipos. Os controles: todo resultado leva o rótulo SIMULAÇÃO e a vila só sugere; quem decide o
 que vai ao teste com pessoas é o designer ou o PO, e a decisão fica registrada. Medimos a vila contra
-um teste com 2 pessoas: 0 acertos, 2 pontos cegos e 6 alarmes falsos. O prompt foi congelado
+um teste com [N] pessoas: [X] acertos, [Y] pontos cegos e [Z] alarmes falsos. O prompt foi congelado
 antes desse teste e nunca ajustado para acertar o resultado esperado. Cada simulação registra modelo,
 versão do prompt, horário, telas e personas, para poder ser auditada e refeita. Usamos só telas
 fictícias, nenhum dado de cliente, e a chave da IA fica fora do código.
@@ -38,9 +39,9 @@ fictícias, nenhum dado de cliente, e a chave da IA fica fora do código.
 *Como a IA funciona:* a vila mostra a imagem da tela e a tarefa para uma IA que entende imagens
 (Qwen3.8 27B, pela API da Groq), no papel de cada persona. Ela diz onde tocaria, onde hesitaria e qual texto da tela
 guiou a decisão. Cada persona tenta 3 vezes cada versão; o painel mostra "concluiu X de 3" e onde
-travou. Tudo roda em paralelo em 0 s. A IA não recebe a resposta certa.
+travou. A simulação completa levou [TEMPO MEDIDO]. A IA não recebe a resposta certa.
 
 *Risco e controle:* o risco é confiar na vila como se fosse gente. Por isso: rótulo SIMULAÇÃO em tudo,
 decisão sempre humana e registrada, prompt congelado antes do teste com pessoas, comparação medida
-com 2 pessoas (0 acertos, 2 pontos cegos, 6 alarmes falsos), registro de modelo, prompt,
+com [N] pessoas ([X] acertos, [Y] pontos cegos, [Z] alarmes falsos), registro de modelo, prompt,
 horário, telas e personas, e nenhum dado real.

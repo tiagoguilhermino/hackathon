@@ -67,13 +67,23 @@ load_dotenv(RAIZ / ".env")
 # Está em "Preview Models" e pode sair do ar sem aviso: por isso existe o modo demo.
 MODELO = os.getenv("VILA_MODELO", "qwen/qwen3.8-27b")
 # Vai para a API como reasoning_effort (none, default, low, medium, high) nos modelos que raciocinam.
-# Congelado junto com o prompt na H6: mudar o esforço muda os resultados.
-ESFORCO = os.getenv("VILA_ESFORCO", "medium")
+# Congelado junto com o prompt v-final: mudar o esforço muda os resultados.
+# "none" por causa do plano gratuito da Groq: ele limita a 1.000 tokens de SAÍDA por minuto (OTPM) e
+# recusa qualquer pedido que espere mais que isso. Com "medium", uma resposta usou 1.386 tokens.
+ESFORCO = os.getenv("VILA_ESFORCO", "none")
+# Congeladas com o prompt v-final. A Groq recomenda de 0,5 a 0,7 para modelos que raciocinam, e com 0,1
+# as 3 rodadas saíam quase iguais (a consistência "X de 3" não media nada).
+TEMPERATURA = float(os.getenv("VILA_TEMPERATURA", "0.6"))
+# Teto de saída por pedido. No plano gratuito da Groq precisa ficar em 1.000 ou menos (limite OTPM); no
+# plano pago dá para subir junto com o esforço (ex.: VILA_ESFORCO=medium e VILA_MAX_TOKENS=3000).
+MAX_TOKENS = int(os.getenv("VILA_MAX_TOKENS", "1000"))
 # Modelos que raciocinam antes de responder. Com o modo JSON, a Groq exige esconder o raciocínio
 # (reasoning_format "hidden" ou "parsed"); senão ele vem no texto, entre <think>, e quebra o JSON.
 PREFIXOS_COM_RACIOCINIO = ("qwen/", "openai/gpt-oss")
-PARALELO = int(os.getenv("VILA_PARALELO", "12"))
-TENTATIVAS_SDK = int(os.getenv("VILA_TENTATIVAS", "3"))
+# Plano gratuito da Groq: uma chamada de cada vez e bastante paciência com o 429 (o SDK espera o
+# retry-after entre as tentativas). No plano pago, dá para subir o paralelismo.
+PARALELO = int(os.getenv("VILA_PARALELO", "1"))
+TENTATIVAS_SDK = int(os.getenv("VILA_TENTATIVAS", "10"))
 USAR_FALLBACK = os.getenv("VILA_FALLBACK", "1") == "1"
 TAREFA_PADRAO = "Agendar um Pix que se repete todo mês."
 
@@ -282,13 +292,13 @@ def _tentar_api(
     
     pedido: dict[str, Any] = dict(
         model=modelo,
-        max_tokens=4000,
+        max_tokens=MAX_TOKENS,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": _mensagem_usuario(tela, tarefa)}
         ],
         response_format={"type": "json_object"},
-        temperature=0.1
+        temperature=TEMPERATURA
     )
     if modelo.startswith(PREFIXOS_COM_RACIOCINIO):
         pedido["reasoning_format"] = "hidden"
@@ -544,6 +554,8 @@ def simular_telas(
             modelo=modelo,
             modelos_que_responderam=modelos_que_responderam,
             esforco=esforco,
+            temperatura=None if offline else TEMPERATURA,
+            max_tokens=None if offline else MAX_TOKENS,
             versao_prompt=versao_prompt,
             sha256_prompt=sha_prompt,
             horario_inicio=inicio.isoformat(timespec="seconds"),
@@ -656,7 +668,8 @@ def _tabela(sim: Simulacao) -> str:
     custo = f" · custo estimado US$ {m.custo_estimado_usd:.2f}" if m.custo_estimado_usd is not None else ""
     linhas += [
         "",
-        f"modo {m.modo} · modelo {m.modelo} · prompt {m.versao_prompt} · esforço {m.esforco}",
+        f"modo {m.modo} · modelo {m.modelo} · prompt {m.versao_prompt} · esforço {m.esforco}"
+        f" · temperatura {m.temperatura}",
         f"{m.chamadas} chamadas, {m.falhas} falhas, {m.duracao_s} s{custo}",
     ]
     if sim.falhas:

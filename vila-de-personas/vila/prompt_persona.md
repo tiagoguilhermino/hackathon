@@ -1,4 +1,4 @@
-versao: v1
+versao: v-final
 <!--
 Prompt de sistema de cada persona da vila. O motor troca os campos {{...}} pelo
 cartão da persona (dados/personas.json). A primeira linha ("versao: ...") é gravada

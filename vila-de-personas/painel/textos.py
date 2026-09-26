@@ -35,6 +35,53 @@ DIAG_TELAS = "Telas"
 DIAG_TELAS_OK = "Oficiais: {nomes}"
 DIAG_TELAS_PROVISORIAS = "Só provisórias: {nomes}. As oficiais chegam do M4 na H3."
 DIAG_TELAS_FALTA = "Nenhuma tela ainda (M4, H2 e H3)"
+# Entrada
+ENTRADA_PERSONAS = "Quais personas tentam a tarefa?"
+ENTRADA_ORIGEM = "De onde vêm as telas?"
+ORIGEM_PRONTAS = "Telas prontas (pasta telas/)"
+ORIGEM_UPLOAD = "Enviar imagens"
+TELA_ANTES = "Versão antes"
+TELA_DEPOIS = "Versão depois"
+SEM_PERSONAS = "Marque pelo menos uma persona."
+PERSONAS_ERRO = "Não consegui ler dados/personas.json: {erro}"
+ESTIMATIVA = (
+    "Serão {n} tentativas ({p} persona(s) × 2 versões × 3 rodadas). No plano gratuito da Groq, "
+    "cada tentativa leva cerca de 1 minuto. Para a demo, use “Carregar resultado salvo”."
+)
+
+# Como ler o resultado
+COMO_LER_TITULO = "Como ler este resultado"
+COMO_LER = (
+    "Cada persona tenta a tarefa **3 vezes** em cada versão (as “rodadas”), porque a IA não responde "
+    "igual toda vez. “Concluiu 2 de 3” quer dizer que em 2 das 3 tentativas ela chegaria à opção certa "
+    "com confiança.\n\n"
+    "- 🟢 **Melhorou** / 🔴 **Piorou**: a diferença entre as versões foi de 2 rodadas ou mais.\n"
+    "- 🟡 **Sinal fraco**: diferença de 1 rodada ou nenhuma. Não dá para concluir nada.\n"
+    "- ⚪ **Incompleto**: alguma tentativa falhou (por exemplo, limite da API), então as versões não "
+    "têm o mesmo número de rodadas. Simule de novo antes de concluir.\n\n"
+    "Tudo aqui é **SIMULAÇÃO**: são hipóteses para levar ao teste com pessoas, não resultados."
+)
+
+# Revisão humana (seção 6 do contrato)
+REVISAO_AJUDA = (
+    "A vila só sugere. Para cada persona, quem decide é o designer ou o PO: levar o ponto ao teste com "
+    "pessoas reais, descartar ou marcar como já corrigido. Deixe “—” nas personas sem decisão."
+)
+DECISAO_QUEM = "Quem está decidindo?"
+DECISAO_ESCOLHA = "Decisão"
+SEM_DECISAO = "—"
+DECISAO_COMENTARIO = "Por quê? (comentário)"
+DECISAO_BOTAO = "Salvar decisões"
+DECISAO_NENHUMA = "Nenhuma decisão marcada: escolha uma opção em pelo menos uma persona."
+DECISAO_SALVA = "{n} decisão(ões) salva(s) em resultados/decisoes.json (total no registro: {total})."
+REGISTRO_ILEGIVEL = (
+    "O arquivo resultados/decisoes.json está ilegível ({erro}). Nada foi gravado, para não apagar o "
+    "histórico. Peça ajuda para consertar o arquivo."
+)
+APONTAMENTO_NENHUM = "não travou em nenhuma das duas versões"
+HISTORICO_TITULO = "Histórico de decisões"
+HISTORICO_VAZIO = "Nenhuma decisão registrada ainda."
+
 # Plano B: resultado salvo, sem chamar a API
 CARREGAR_TITULO = "Ou carregue um resultado salvo"
 CARREGAR_AJUDA = (

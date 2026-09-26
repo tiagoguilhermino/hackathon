@@ -1,9 +1,0 @@
-versao;dificuldade_vila;tentativas_vila;personas_vila;dificuldade_pessoas;participantes;sugestao;motivo_sugestao;classificacao_final;conferido;observacao
-A;;0;;não viu Mais opções;EX1;ponto cego;só as pessoas tiveram;ponto cego;ok;
-A;[OFFLINE] elemento X;3;Ana, Marcos, Seu Jorge;;;alarme falso;só a vila apontou;alarme falso;ok;
-A;[OFFLINE] elemento Y;1;Carla;;;alarme falso;só a vila apontou;alarme falso;ok;
-A;[OFFLINE] botão Z;1;Marcos;;;alarme falso;só a vila apontou;alarme falso;ok;
-B;;0;;ícone sem texto;EX2;ponto cego;só as pessoas tiveram;ponto cego;ok;
-B;[OFFLINE] botão Z;3;Marcos, Seu Jorge;;;alarme falso;só a vila apontou;alarme falso;ok;
-B;[OFFLINE] elemento X;2;Carla, Seu Jorge;;;alarme falso;só a vila apontou;alarme falso;ok;
-B;[OFFLINE] elemento Y;1;Carla;;;alarme falso;só a vila apontou;alarme falso;ok;

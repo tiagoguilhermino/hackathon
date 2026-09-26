@@ -118,6 +118,8 @@ class Metadados(BaseModel):
         description="Modelos que de fato responderam (difere de `modelo` se o reserva entrou).",
     )
     esforco: str
+    temperatura: Optional[float] = None
+    max_tokens: Optional[int] = None
     versao_prompt: str
     sha256_prompt: str
     horario_inicio: str
