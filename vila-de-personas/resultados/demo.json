@@ -1,0 +1,663 @@
+{
+  "id": "sim-20260926-172050-18c330",
+  "rotulo": "SIMULAÇÃO",
+  "aviso": "SIMULAÇÃO com personas de IA · protótipo de hackathon · telas fictícias. Não substitui teste com pessoas, não aprova design e não usa dado real.",
+  "carregado_de": null,
+  "metadados": {
+    "modo": "offline-teste",
+    "modelo": "offline-teste",
+    "modelos_que_responderam": [
+      "offline-teste"
+    ],
+    "esforco": "medium",
+    "versao_prompt": "v1",
+    "sha256_prompt": "155b320473f29cbfc5f00f6d479069686909fd00b369cf9cae838ede6107623a",
+    "horario_inicio": "2026-09-26T17:20:50-03:00",
+    "horario_fim": "2026-09-26T17:20:50-03:00",
+    "duracao_s": 0.2,
+    "tarefa": "Agendar um Pix que se repete todo mês.",
+    "rodadas": 3,
+    "telas": [
+      {
+        "versao": "A",
+        "arquivo": "A.png",
+        "sha256": "02d7404e93eb4fff8e8f1b2d1e20aa02295d63cca3723d4ebe8eac367787ca0b"
+      },
+      {
+        "versao": "B",
+        "arquivo": "B.png",
+        "sha256": "fe0adb00d7914aece1d76296d5ef1a070f4486ef17e921ca1a95706696cf9b60"
+      }
+    ],
+    "personas": [
+      "ana",
+      "jorge",
+      "carla",
+      "marcos"
+    ],
+    "chamadas": 24,
+    "falhas": 0,
+    "tokens_entrada": 0,
+    "tokens_saida": 0,
+    "custo_estimado_usd": null,
+    "versao_vila": "0.1.0"
+  },
+  "resultados": [
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": "[OFFLINE] elemento X",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 1,
+      "persona_id": "ana",
+      "versao": "A",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 4,
+      "persona_id": "ana",
+      "versao": "A",
+      "rodada": 2
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 3,
+      "persona_id": "ana",
+      "versao": "A",
+      "rodada": 3
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 5,
+      "persona_id": "ana",
+      "versao": "B",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 5,
+      "persona_id": "ana",
+      "versao": "B",
+      "rodada": 2
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 4,
+      "persona_id": "ana",
+      "versao": "B",
+      "rodada": 3
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 4,
+      "persona_id": "jorge",
+      "versao": "A",
+      "rodada": 1
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": true,
+      "desistiu": true,
+      "onde_travou": "[OFFLINE] elemento X",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 2,
+      "persona_id": "jorge",
+      "versao": "A",
+      "rodada": 2
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 5,
+      "persona_id": "jorge",
+      "versao": "A",
+      "rodada": 3
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": "[OFFLINE] botão Z",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 1,
+      "persona_id": "jorge",
+      "versao": "B",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 4,
+      "persona_id": "jorge",
+      "versao": "B",
+      "rodada": 2
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": "[OFFLINE] elemento X",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 1,
+      "persona_id": "jorge",
+      "versao": "B",
+      "rodada": 3
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 3,
+      "persona_id": "carla",
+      "versao": "A",
+      "rodada": 1
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": true,
+      "desistiu": true,
+      "onde_travou": "[OFFLINE] elemento Y",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 1,
+      "persona_id": "carla",
+      "versao": "A",
+      "rodada": 2
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 5,
+      "persona_id": "carla",
+      "versao": "A",
+      "rodada": 3
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento Y",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": "[OFFLINE] elemento Y",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 3,
+      "persona_id": "carla",
+      "versao": "B",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 4,
+      "persona_id": "carla",
+      "versao": "B",
+      "rodada": 2
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": true,
+      "desistiu": true,
+      "onde_travou": "[OFFLINE] elemento X",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 1,
+      "persona_id": "carla",
+      "versao": "B",
+      "rodada": 3
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3",
+        "[OFFLINE] passo fictício 4"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": true,
+      "desistiu": true,
+      "onde_travou": "[OFFLINE] botão Z",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 2,
+      "persona_id": "marcos",
+      "versao": "A",
+      "rodada": 1
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": false,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 5,
+      "persona_id": "marcos",
+      "versao": "A",
+      "rodada": 2
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] elemento X",
+      "hesitou": true,
+      "desistiu": true,
+      "onde_travou": "[OFFLINE] elemento X",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 2,
+      "persona_id": "marcos",
+      "versao": "A",
+      "rodada": 3
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": true,
+      "desistiu": true,
+      "onde_travou": "[OFFLINE] botão Z",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 3,
+      "persona_id": "marcos",
+      "versao": "B",
+      "rodada": 1
+    },
+    {
+      "concluiu": false,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2",
+        "[OFFLINE] passo fictício 3"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": "[OFFLINE] botão Z",
+      "o_que_nao_entendeu": [
+        "[OFFLINE] dúvida fictícia"
+      ],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 1,
+      "persona_id": "marcos",
+      "versao": "B",
+      "rodada": 2
+    },
+    {
+      "concluiu": true,
+      "passos": [
+        "[OFFLINE] passo fictício 1",
+        "[OFFLINE] passo fictício 2"
+      ],
+      "primeiro_toque": "[OFFLINE] botão Z",
+      "hesitou": true,
+      "desistiu": false,
+      "onde_travou": null,
+      "o_que_nao_entendeu": [],
+      "texto_da_tela_que_motivou": [
+        "[OFFLINE] texto fictício"
+      ],
+      "facilidade": 4,
+      "persona_id": "marcos",
+      "versao": "B",
+      "rodada": 3
+    }
+  ],
+  "falhas": [],
+  "agregados": [
+    {
+      "persona_id": "ana",
+      "persona_nome": "Ana",
+      "versao": "A",
+      "rodadas_validas": 3,
+      "concluiu": 2,
+      "texto": "concluiu 2 de 3",
+      "trava_mais_frequente": "[OFFLINE] elemento X",
+      "primeiro_toque_mais_frequente": "[OFFLINE] elemento Y",
+      "facilidade_media": 2.7,
+      "desistencias": 0,
+      "hesitacoes": 2,
+      "falhas": 0
+    },
+    {
+      "persona_id": "ana",
+      "persona_nome": "Ana",
+      "versao": "B",
+      "rodadas_validas": 3,
+      "concluiu": 3,
+      "texto": "concluiu 3 de 3",
+      "trava_mais_frequente": null,
+      "primeiro_toque_mais_frequente": "[OFFLINE] elemento Y",
+      "facilidade_media": 4.7,
+      "desistencias": 0,
+      "hesitacoes": 1,
+      "falhas": 0
+    },
+    {
+      "persona_id": "jorge",
+      "persona_nome": "Seu Jorge",
+      "versao": "A",
+      "rodadas_validas": 3,
+      "concluiu": 2,
+      "texto": "concluiu 2 de 3",
+      "trava_mais_frequente": "[OFFLINE] elemento X",
+      "primeiro_toque_mais_frequente": "[OFFLINE] elemento X",
+      "facilidade_media": 3.7,
+      "desistencias": 1,
+      "hesitacoes": 2,
+      "falhas": 0
+    },
+    {
+      "persona_id": "jorge",
+      "persona_nome": "Seu Jorge",
+      "versao": "B",
+      "rodadas_validas": 3,
+      "concluiu": 1,
+      "texto": "concluiu 1 de 3",
+      "trava_mais_frequente": "[OFFLINE] botão Z",
+      "primeiro_toque_mais_frequente": "[OFFLINE] elemento X",
+      "facilidade_media": 2.0,
+      "desistencias": 0,
+      "hesitacoes": 2,
+      "falhas": 0
+    },
+    {
+      "persona_id": "carla",
+      "persona_nome": "Carla",
+      "versao": "A",
+      "rodadas_validas": 3,
+      "concluiu": 2,
+      "texto": "concluiu 2 de 3",
+      "trava_mais_frequente": "[OFFLINE] elemento Y",
+      "primeiro_toque_mais_frequente": "[OFFLINE] elemento X",
+      "facilidade_media": 3.0,
+      "desistencias": 1,
+      "hesitacoes": 1,
+      "falhas": 0
+    },
+    {
+      "persona_id": "carla",
+      "persona_nome": "Carla",
+      "versao": "B",
+      "rodadas_validas": 3,
+      "concluiu": 1,
+      "texto": "concluiu 1 de 3",
+      "trava_mais_frequente": "[OFFLINE] elemento Y",
+      "primeiro_toque_mais_frequente": "[OFFLINE] elemento Y",
+      "facilidade_media": 2.7,
+      "desistencias": 1,
+      "hesitacoes": 2,
+      "falhas": 0
+    },
+    {
+      "persona_id": "marcos",
+      "persona_nome": "Marcos",
+      "versao": "A",
+      "rodadas_validas": 3,
+      "concluiu": 1,
+      "texto": "concluiu 1 de 3",
+      "trava_mais_frequente": "[OFFLINE] botão Z",
+      "primeiro_toque_mais_frequente": "[OFFLINE] botão Z",
+      "facilidade_media": 3.0,
+      "desistencias": 2,
+      "hesitacoes": 2,
+      "falhas": 0
+    },
+    {
+      "persona_id": "marcos",
+      "persona_nome": "Marcos",
+      "versao": "B",
+      "rodadas_validas": 3,
+      "concluiu": 1,
+      "texto": "concluiu 1 de 3",
+      "trava_mais_frequente": "[OFFLINE] botão Z",
+      "primeiro_toque_mais_frequente": "[OFFLINE] botão Z",
+      "facilidade_media": 2.7,
+      "desistencias": 1,
+      "hesitacoes": 3,
+      "falhas": 0
+    }
+  ]
+}
