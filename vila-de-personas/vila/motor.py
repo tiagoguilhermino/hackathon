@@ -1,6 +1,6 @@
 """Motor da vila: cada persona de IA "tenta" a tarefa olhando a imagem da tela.
 
-Rode a partir da pasta backend/:
+Rode a partir da pasta vila-de-personas/:
 
     python -m vila.motor                  # H2: 1 persona, tela A, 1 rodada, imprime o JSON
     python -m vila.motor --vila           # H4: vila completa (A × B, todas as personas, 3 rodadas)
@@ -51,7 +51,7 @@ from .contrato import (
 
 VERSAO_VILA = "0.1.0"
 
-RAIZ = Path(__file__).resolve().parent.parent  # backend/
+RAIZ = Path(__file__).resolve().parent.parent  # vila-de-personas/
 PASTA_VILA = RAIZ / "vila"
 ARQ_PROMPT = PASTA_VILA / "prompt_persona.md"
 ARQ_PERSONAS = RAIZ / "dados" / "personas.json"
@@ -63,19 +63,23 @@ PASTAS_TELAS = (RAIZ / "telas", RAIZ.parent / "telas", PASTA_AMOSTRAS)
 
 load_dotenv(RAIZ / ".env")
 
-MODELO = os.getenv("VILA_MODELO", "llama-3.2-90b-vision-preview")
+# Único modelo da Groq que lê imagem (console.groq.com/docs/vision, conferido em 26/09/2026).
+# Está em "Preview Models" e pode sair do ar sem aviso: por isso existe o modo demo.
+MODELO = os.getenv("VILA_MODELO", "qwen/qwen3.8-27b")
+# Vai para a API como reasoning_effort (none, default, low, medium, high) nos modelos que raciocinam.
 # Congelado junto com o prompt na H6: mudar o esforço muda os resultados.
 ESFORCO = os.getenv("VILA_ESFORCO", "medium")
+# Modelos que raciocinam antes de responder. Com o modo JSON, a Groq exige esconder o raciocínio
+# (reasoning_format "hidden" ou "parsed"); senão ele vem no texto, entre <think>, e quebra o JSON.
+PREFIXOS_COM_RACIOCINIO = ("qwen/", "openai/gpt-oss")
 PARALELO = int(os.getenv("VILA_PARALELO", "12"))
 TENTATIVAS_SDK = int(os.getenv("VILA_TENTATIVAS", "3"))
 USAR_FALLBACK = os.getenv("VILA_FALLBACK", "1") == "1"
 TAREFA_PADRAO = "Agendar um Pix que se repete todo mês."
 
 # US$ por milhão de tokens (entrada, saída). Só para a estimativa gravada nos metadados.
-PRECOS = {
-    "llama-3.2-90b-vision-preview": (0.50, 0.50),
-    "llama-3.2-11b-vision-preview": (0.20, 0.20),
-}
+# Sem preço conferido para o modelo em uso, o custo fica vazio no JSON (não inventamos número).
+PRECOS: dict[str, tuple[float, float]] = {}
 
 LIMITE_IMAGEM_BYTES = 5 * 1024 * 1024
 
@@ -209,7 +213,7 @@ def montar_prompt(corpo: str, persona: Persona) -> str:
 
 
 def _mensagem_usuario(tela: TelaPreparada, tarefa: str) -> list[dict[str, Any]]:
-    # A imagem vai antes do texto.
+    # O texto vai antes da imagem, como no exemplo da documentação de visão da Groq.
     return [
         {
             "type": "text",
@@ -255,8 +259,8 @@ def _cliente_api():
         if _cliente is None:
             if not os.getenv("GROQ_API_KEY"):
                 raise ErroVila(
-                    "Chave da API não encontrada. Coloque GROQ_API_KEY=... em backend/.env "
-                    "(nunca no código) ou use o modo demo."
+                    "Chave da API não encontrada. Coloque GROQ_API_KEY=... no arquivo .env "
+                    "(nunca no código) ou use “Carregar resultado salvo”."
                 )
             import groq
             _cliente = groq.Groq(max_retries=TENTATIVAS_SDK)
@@ -286,9 +290,17 @@ def _tentar_api(
         response_format={"type": "json_object"},
         temperature=0.1
     )
-    
+    if modelo.startswith(PREFIXOS_COM_RACIOCINIO):
+        pedido["reasoning_format"] = "hidden"
+        pedido["reasoning_effort"] = esforco
+
     resposta = cliente.chat.completions.create(**pedido)
-    conteudo = resposta.choices[0].message.content
+    escolha = resposta.choices[0]
+    if escolha.finish_reason == "length":
+        raise ErroVila(
+            "A resposta da IA foi cortada no limite de tokens. Tente VILA_ESFORCO=low no .env."
+        )
+    conteudo = escolha.message.content
     if not conteudo:
         raise ErroVila("A resposta da IA veio vazia.")
     
@@ -350,7 +362,7 @@ def mensagem_de_erro(erro: BaseException) -> str:
     except ImportError:
         return f"Erro inesperado: {erro}"
     if isinstance(erro, groq.AuthenticationError):
-        return "Chave da API inválida. Confira GROQ_API_KEY em backend/.env."
+        return "Chave da API inválida. Confira GROQ_API_KEY no arquivo .env."
     if isinstance(erro, groq.PermissionDeniedError):
         return "A chave da API não tem permissão para usar este modelo."
     if isinstance(erro, groq.NotFoundError):
@@ -402,7 +414,7 @@ def agregar(
             concluiu = sum(r.concluiu for r in doses)
             texto = f"concluiu {concluiu} de {len(doses)}"
             if n_falhas:
-                texto += f" ({n_falhas} tentativa{'s' if n_falhas > 1 else ''} falhou)"
+                texto += f" ({n_falhas} tentativa{'s falharam' if n_falhas > 1 else ' falhou'})"
             agregados.append(
                 AgregadoPersonaVersao(
                     persona_id=persona.id,

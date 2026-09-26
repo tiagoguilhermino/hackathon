@@ -41,9 +41,11 @@ def _personas(raiz: Path) -> Item:
     if not arquivo.is_file():
         return Item(textos.DIAG_PERSONAS, False, textos.DIAG_PERSONAS_FALTA)
     try:
-        personas = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        # O motor aceita a lista pura ou {"personas": [...]} com versão e aviso junto.
+        personas = dados.get("personas") if isinstance(dados, dict) else dados
         if not isinstance(personas, list):
-            raise ValueError("o arquivo precisa ser uma lista")
+            raise ValueError('precisa ser uma lista de personas ou ter a chave "personas" com essa lista')
     except ValueError as erro:
         return Item(textos.DIAG_PERSONAS, False, textos.DIAG_PERSONAS_INVALIDO.format(erro=erro))
     return Item(textos.DIAG_PERSONAS, bool(personas), textos.DIAG_PERSONAS_OK.format(n=len(personas)))

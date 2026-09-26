@@ -5,21 +5,23 @@
 | Passo | O que clicar | O que a tela deve mostrar | O que falar | Tempo (s) |
 |---|---|---|---|---|
 | 1. Início | [CONFERIR NO APP] | Tela inicial do painel com o aviso "Protótipo de hackathon". | "Nossa solução ajuda a equipe a testar fluxos com personas de IA para validar opções de tela." | 10 |
-| 2. Escolher telas | [CONFERIR NO APP] para A e B | Preview das telas A e B e as personas listadas. | "Vamos comparar a versão atual A com a nova B. Para a demo, carregarei um resultado salvo." | 10 |
-| 3. Simular / Carregar | [CONFERIR NO APP] (modo demo) | Resultados com o rótulo SIMULAÇÃO. Mostrar que o Seu Jorge piorou na B. | "A simulação rodou. Note que o Seu Jorge piorou na versão B e não concluiu a tarefa." | 15 |
-| 4. Decisão | [CONFERIR NO APP] no card do Seu Jorge | Formulário de decisão preenchido marcando "levar ao teste real" e comentário. | "Como PO, marco 'levar ao teste real' para investigar o porquê com humanos, e salvo." | 15 |
-| 5. Subir tela C | [CONFERIR NO APP] | Área para fazer upload e preview da versão C substituindo a A. | "Baseado no erro, o designer desenha a versão C. Subimos e comparamos a B com a C." | 10 |
-| 6. Nova simulação | [CONFERIR NO APP] (modo demo) | Resultados de B × C mostrando a melhora geral. | "A nova simulação confirma que a versão C melhorou a experiência para todos." | 10 |
+| 2. Escolher telas | [CONFERIR NO APP] para A e B | Preview das telas A e B. | "Vamos comparar a versão atual A com a nova B. Para a demo, carregarei o resultado salvo de uma simulação real." | 10 |
+| 3. Carregar | "Ou carregue um resultado salvo" → `demo.json` → "Carregar resultado salvo" | Aviso "Resultado salvo, não é ao vivo", rótulo SIMULAÇÃO e seletores Antes = A, Depois = B. Mostrar a persona que piorou na B. | "Este é o resultado de uma simulação real, rodada antes. Note que [PERSONA] piorou na versão B e não concluiu a tarefa." | 15 |
+| 4. Decisão | [CONFERIR NO APP] no formulário de decisão | Formulário de decisão preenchido marcando "levar ao teste real" e comentário. | "Como PO, marco 'levar ao teste real' para investigar o porquê com humanos, e salvo." | 15 |
+| 5. Comparar B × C | Seletores: Antes = B, Depois = C | Resultados de B × C (o `demo.json` já tem as três versões). | "Com base nesse ponto, o designer desenhou a versão C. Agora comparamos a B com a C." | 10 |
+| 6. Ler o resultado | [CONFERIR NO APP] | Leitura de cada persona em B × C. | "Na simulação, a C resolveu a trava para [PERSONAS]. É uma hipótese para o teste com pessoas, não uma confirmação." | 10 |
 | 7. Fim | [CONFERIR NO APP] para salvar registro | Confirmação de registro salvo. | "Salvamos a decisão final. Lembrando que isso é uma simulação e não substitui os testes reais." | 5 |
 
 **Tempo total:** 75 segundos.
+
+Os nomes e resultados entre colchetes saem da simulação oficial (`resultados/demo.json`, rodada com as telas do M4). Se ela não mostrar ninguém piorando na B ou melhorando na C, a fala muda: não force a história. Um resultado que contraria a ideia também é aprendizado para apresentar.
 
 ## 2. Plano B
 
 | Cenário | O que fazer |
 |---|---|
-| Internet cair | Usar o vídeo da demo (deixe-o previamente aberto em segundo plano como contingência). |
-| Erro 429 na API | Clicar para usar os resultados salvos (modo demo) sem tentar re-rodar ao vivo. |
+| Internet cair | Com o app rodando no notebook, carregar o `demo.json` em "Ou carregue um resultado salvo" (funciona sem internet). Sem o app, usar o vídeo da demo, deixado aberto como contingência. |
+| Erro 429 na API | Abrir "Ou carregue um resultado salvo" e carregar o `demo.json`, sem tentar de novo ao vivo. |
 | O app não abrir | Tentar reiniciar, mas, se demorar, alternar imediatamente para o vídeo da gravação. |
 
 ## 3. Prints para o M4

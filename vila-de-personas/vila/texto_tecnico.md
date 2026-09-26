@@ -6,7 +6,8 @@ Os trechos entre colchetes são números que **só entram depois de medidos** (s
 
 ## Como a IA funciona (bloco 3, P2)
 
-A vila usa um modelo de IA que entende imagens (Claude Opus 5, da Anthropic). Para cada persona, o
+A vila usa um modelo de IA que entende imagens (Qwen3.8 27B, acessado pela API da Groq; o nome
+exato fica gravado em cada simulação). Para cada persona, o
 sistema junta o cartão dela (idade, familiaridade com tecnologia, onde usa o celular, acessibilidade,
 objetivo e medo) com a imagem de uma tela e uma tarefa, como "agendar um Pix que se repete todo mês".
 No papel dessa persona, a IA diz onde tocaria, passo a passo, onde hesitaria ou desistiria e qual
@@ -35,7 +36,7 @@ fictícias, nenhum dado de cliente, e a chave da IA fica fora do código.
 ## Versão curta para o WhatsApp
 
 *Como a IA funciona:* a vila mostra a imagem da tela e a tarefa para uma IA que entende imagens
-(Claude Opus 5), no papel de cada persona. Ela diz onde tocaria, onde hesitaria e qual texto da tela
+(Qwen3.8 27B, pela API da Groq), no papel de cada persona. Ela diz onde tocaria, onde hesitaria e qual texto da tela
 guiou a decisão. Cada persona tenta 3 vezes cada versão; o painel mostra "concluiu X de 3" e onde
 travou. Tudo roda em paralelo em 0 s. A IA não recebe a resposta certa.
 

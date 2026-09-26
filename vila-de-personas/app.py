@@ -8,11 +8,30 @@ from dotenv import load_dotenv
 
 from painel import textos
 from painel.diagnostico import diagnosticar
-from vila.motor import simular_vila, carregar_demo
+from painel.leitura import ler_persona
+from vila.motor import ARQ_DEMO, carregar_demo, listar_simulacoes, mensagem_de_erro, simular_vila
 
 load_dotenv()
 
 st.set_page_config(page_title=textos.TITULO_PAGINA, page_icon="🏘️", layout="wide")
+
+
+def guardar_resultado(sim):
+    """Vale para simulação ao vivo e para resultado salvo: o painel lê as versões do próprio JSON."""
+    st.session_state["sim_resultado"] = sim.model_dump()
+    st.session_state["simulando"] = True
+
+
+def rotulo_salvo(caminho: Path) -> str:
+    try:
+        meta = json.loads(caminho.read_text(encoding="utf-8"))["metadados"]
+    except (OSError, ValueError, KeyError):
+        return f"{caminho.name} (não consegui ler)"
+    versoes = ", ".join(t["versao"] for t in meta.get("telas", []))
+    horario = meta.get("horario_inicio", "")[:16].replace("T", " ")
+    modo = "FALSO, teste offline" if meta.get("modo") == "offline-teste" else "rodou com a IA"
+    return f"{caminho.name} · telas {versoes} · {horario} · {modo}"
+
 
 st.info(textos.AVISO_FIXO, icon="🧪")
 st.title(textos.TITULO)
@@ -34,59 +53,83 @@ with col_b:
     if img_b:
         st.image(img_b, caption=f"Versão {nome_b}")
 
-if st.button("Simular (ao vivo ou offline)"):
+if st.button("Simular com a IA"):
     if not (img_a and img_b):
         st.error("Faça o upload das duas versões para simular.")
     elif nome_a == nome_b:
         st.error("As versões precisam ter nomes diferentes.")
     else:
-        st.session_state["simulando"] = True
-        st.session_state["nome_a"] = nome_a
-        st.session_state["nome_b"] = nome_b
-        
         progress_bar = st.progress(0, text="Iniciando a simulação...")
+
         def update_progress(feitas, total):
             progress_bar.progress(feitas / total, text=f"Simulando rodadas ({feitas}/{total})...")
-            
+
         try:
-            # Chama a simulação (usa API se a chave estiver configurada, senão offline se modificado no motor, ou demo)
-            # Mas vamos chamar o modo offline_teste=True se não tiver GROQ_API_KEY no caso de erro? 
-            # O próprio motor decide como lidar se não tiver chave (lança exceção ou usa anthropic key).
-            # Vamos usar offline=True provisoriamente se quiser apenas testar sem gastar
             sim = simular_vila(img_a, img_b, tarefa=tarefa, rodadas=3, versoes=(nome_a, nome_b), progresso=update_progress, offline=False)
-            st.session_state["sim_resultado"] = sim.model_dump()
-            progress_bar.empty()
+            guardar_resultado(sim)
         except Exception as e:
-            st.error(f"Erro na simulação: {e}")
-            progress_bar.empty()
+            st.error(mensagem_de_erro(e))
+        progress_bar.empty()
+
+with st.expander(textos.CARREGAR_TITULO, expanded=False):
+    st.caption(textos.CARREGAR_AJUDA)
+    salvos = ([ARQ_DEMO] if ARQ_DEMO.exists() else []) + listar_simulacoes()
+    if not salvos:
+        st.write(textos.CARREGAR_VAZIO)
+    else:
+        escolhido = st.selectbox(textos.CARREGAR_ESCOLHA, salvos, format_func=rotulo_salvo)
+        if st.button(textos.CARREGAR_BOTAO):
+            try:
+                guardar_resultado(carregar_demo(escolhido))
+            except Exception as e:
+                st.error(mensagem_de_erro(e))
 
 if st.session_state.get("simulando") and "sim_resultado" in st.session_state:
     st.header("2 · Vila de IA")
     sim_data = st.session_state["sim_resultado"]
+    meta = sim_data["metadados"]
     st.warning(sim_data.get("aviso", textos.AVISO_FIXO))
-    
+    if meta["modo"] == "offline-teste":
+        st.error(textos.AVISO_OFFLINE)
+    if sim_data.get("carregado_de"):
+        st.info(textos.CARREGADO_DE.format(
+            arquivo=sim_data["carregado_de"],
+            horario=meta["horario_inicio"][:16].replace("T", " "),
+            modelo=meta["modelo"],
+        ))
+
+    # As versões vêm do próprio resultado (um arquivo salvo pode ter A, B e C).
+    versoes = [t["versao"] for t in meta["telas"]]
+    if len(versoes) > 2:
+        c_antes, c_depois = st.columns(2)
+        antes = c_antes.selectbox(textos.COMPARAR_ANTES, versoes, index=0)
+        depois = c_depois.selectbox(textos.COMPARAR_DEPOIS, versoes, index=1)
+    else:
+        antes, depois = versoes[0], versoes[-1]
+
     agregados = sim_data.get("agregados", [])
-    
-    nome_a = st.session_state["nome_a"]
-    nome_b = st.session_state["nome_b"]
-    
+
     # Agrupar por persona
     personas = {}
     for agg in agregados:
         pid = agg["persona_id"]
         if pid not in personas:
             personas[pid] = {"nome": agg["persona_nome"], "A": None, "B": None}
-        if agg["versao"] == nome_a:
+        if agg["versao"] == antes:
             personas[pid]["A"] = agg
-        elif agg["versao"] == nome_b:
+        elif agg["versao"] == depois:
             personas[pid]["B"] = agg
-            
+
+    if antes == depois:
+        st.warning(textos.COMPARAR_IGUAIS)
+        personas = {}
+
     for pid, data in personas.items():
         st.subheader(f"Persona: {data['nome']}")
         c1, c2, c3 = st.columns([2, 2, 1])
-        
+
         with c1:
-            st.write(f"**Antes ({nome_a})**")
+            st.write(f"**Antes ({antes})**")
             a_data = data["A"]
             if a_data:
                 st.write(a_data["texto"])
@@ -95,9 +138,9 @@ if st.session_state.get("simulando") and "sim_resultado" in st.session_state:
                     st.write(f"- Travou em: {a_data['trava_mais_frequente']}")
             else:
                 st.write("Sem dados.")
-                
+
         with c2:
-            st.write(f"**Depois ({nome_b})**")
+            st.write(f"**Depois ({depois})**")
             b_data = data["B"]
             if b_data:
                 st.write(b_data["texto"])
@@ -106,47 +149,48 @@ if st.session_state.get("simulando") and "sim_resultado" in st.session_state:
                     st.write(f"- Travou em: {b_data['trava_mais_frequente']}")
             else:
                 st.write("Sem dados.")
-                
+
         with c3:
-            if a_data and b_data:
-                from vila.contrato import leitura
-                sinal = leitura(a_data["concluiu"], b_data["concluiu"])
-                if sinal == 'melhorou':
-                    st.success("🟢 Melhorou")
-                elif sinal == 'piorou':
-                    st.error("🔴 Piorou")
-                else:
-                    st.warning("🟡 Sinal fraco")
+            sinal = ler_persona(a_data, b_data)
+            if sinal == "melhorou":
+                st.success(textos.LEITURA_MELHOROU)
+            elif sinal == "piorou":
+                st.error(textos.LEITURA_PIOROU)
+            elif sinal == "sinal fraco":
+                st.warning(textos.LEITURA_SINAL_FRACO)
+            else:
+                st.info(textos.LEITURA_INCOMPLETO)
+                st.caption(textos.LEITURA_INCOMPLETO_DETALHE)
         st.divider()
 
     st.header("3 & 4 · Revisão humana e registro")
     with st.form("form_decisao"):
         decisao = st.selectbox("O que fazer com estes apontamentos?", ["levar ao teste real", "descartar", "já corrigido"])
         comentario = st.text_area("Comentário")
-        
+
         if st.form_submit_button("Salvar decisão"):
             decisoes_file = Path(__file__).parent / "resultados" / "decisoes.json"
             decisoes_file.parent.mkdir(parents=True, exist_ok=True)
-            
+
             nova_decisao = {
                 "timestamp": datetime.now().isoformat(),
                 "decisao": decisao,
                 "comentario": comentario,
                 "tarefa": tarefa,
-                "versoes": f"{nome_a} -> {nome_b}"
+                "versoes": f"{antes} -> {depois}"
             }
-            
+
             lista_decisoes = []
             if decisoes_file.exists():
                 try:
                     lista_decisoes = json.loads(decisoes_file.read_text())
                 except:
                     pass
-            
+
             lista_decisoes.append(nova_decisao)
             decisoes_file.write_text(json.dumps(lista_decisoes, indent=2))
             st.success("Decisão salva com sucesso!")
-            
+
             with st.expander("Histórico de decisões", expanded=True):
                 for d in reversed(lista_decisoes):
                     st.write(f"**{d['timestamp']}** - {d['decisao']} ({d.get('versoes', '')})")
