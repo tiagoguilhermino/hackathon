@@ -115,6 +115,8 @@ com pessoas.
 | v1 | 26/09/2026 | Primeira versão: persona pelo cartão, olhar só a imagem, passo a passo, pode hesitar e desistir, citar o texto da tela, critério de "concluiu". | Encanamento (offline). |
 | v-final | 26/09/2026, ~20h35 | Texto igual ao v1. Congelado com `qwen/qwen3.8-27b`, esforço `none`, temperatura 0,6 e teto de 1.000 tokens (limites do plano gratuito da Groq). | API real, tela B oficial: Seu Jorge (esforço medium) e Ana (esforço none). Nos dois casos a persona não viu o ícone de repetir e não concluiu. |
 
+**Simulação oficial** (`resultados/sim-20260926-203746-46299b.json`, copiada para `resultados/demo.json`): prompt v-final, telas oficiais A, B e C, 4 personas × 3 rodadas = 36 chamadas, 0 falhas, 1.195 s. Resultado: A e B, 0 de 3 para todas as personas; C, 3 de 3 para todas.
+
 ## Comparação com as pessoas e números finais
 
 1. Passe as notas do teste com pessoas para `dados/notas_teste.csv` (vírgula ou ponto e vírgula):

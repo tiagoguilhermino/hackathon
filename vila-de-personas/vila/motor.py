@@ -727,7 +727,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
         telas = _ler_telas_cli(args.telas, ["A", "B"])
         total = len(telas) * args.rodadas * len(resolver_personas(personas))
-        print(f"Rodando {total} tentativas em paralelo...", file=sys.stderr)
+        print(f"Rodando {total} tentativas, {PARALELO} por vez...", file=sys.stderr)
 
         def mostrar(feitas: int, total: int) -> None:
             print(f"\r{feitas}/{total}", end="", file=sys.stderr, flush=True)

@@ -8,6 +8,31 @@
 
 ---
 
+## Atualização de 26/09/2026, ~21h: M1 e M2 feitos
+
+O que mudou desde a avaliação abaixo:
+
+| Item | Situação |
+|---|---|
+| Telas oficiais A, B e C | ✅ tiradas do frontend Lume, em `vila-de-personas/telas/` (veja o `LEIA-ME.md` de lá) |
+| A vila roda com a IA de verdade | ✅ `qwen/qwen3.8-27b` pela Groq, ajustado ao limite do plano gratuito (1.000 tokens de resposta por minuto) |
+| Prompt congelado | ✅ `v-final`, antes do teste com pessoas |
+| Simulação oficial e `demo.json` real | ✅ 36 chamadas, 0 falhas, cerca de 20 min. A e B: 0 de 3 para as 4 personas; C: 3 de 3 para todas |
+| Números fictícios | ✅ removidos; o texto técnico só tem números medidos, e o resto fica entre [colchetes] |
+| Painel: decisão humana por persona (quem, simulação, leitura, apontamento, porquê) e histórico | ✅ |
+| Painel: escolher personas e usar as telas prontas; "Como ler este resultado" | ✅ |
+| Contrato de dados 1.1 e README da vila | ✅ descrevem o código atual (falta o "de acordo" do M1) |
+| Pesquisa consolidada e revisada (`backend/pesquisa/output/00-*.md`) | ✅ 26 evidências conferidas contra os originais |
+| **Falta** | teste com 3 a 5 pessoas nas mesmas telas (Passo 8) → comparação e números (Passo 9) → ficha (Passo 10) → link público (Passo 11) → vídeo e slides |
+
+**Para a apresentação:** na vila, as 4 personas se comportaram igual. Nem a Ana, que "costuma tentar ícones", achou o ⋯ da A ou o ícone da B. Isso bate com a evidência [5] da pesquisa consolidada (a IA "achata" diferenças entre perfis). O teste com pessoas vai mostrar se é uma dificuldade real ou um ponto cego da vila. Nos dois casos, é resultado para contar.
+
+**Para o frontend (Iury):**
+- no botão "Repetir este Pix" (versão B), trocar `text-accent-foreground` por `text-accent`: hoje o ícone está branco sobre branco;
+- tirar "Itaú Unibanco" e "Nubank" dos contatos de teste antes do vídeo.
+
+---
+
 ## 0. Urgente: fazer antes de qualquer outra coisa
 
 1. **Revogar a chave do Devin que vazou.** Ela estava escrita em `docs/publicacao.md` e foi para o GitHub no commit `b1c7a03` ("H9: Adicionado roteiro demo…"). Esta revisão tirou a chave do arquivo, mas ela continua no histórico do git. O repositório é privado, mas quem tem acesso a ele consegue ver a chave.

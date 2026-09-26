@@ -14,8 +14,8 @@ No papel dessa persona, a IA diz onde tocaria, passo a passo, onde hesitaria ou 
 texto da tela guiou cada decisão, sempre no mesmo formato. Ela vê só a imagem, não o aplicativo, e
 não recebe a resposta certa. Como as respostas variam, cada persona tenta 3 vezes cada versão; o
 painel mostra quantas vezes ela concluiu (por exemplo, "concluiu 2 de 3") e onde mais travou. As
-[NÚMERO DE TENTATIVAS] tentativas rodam uma de cada vez (limite do plano gratuito da Groq) e levaram
-[TEMPO MEDIDO].
+36 tentativas (4 personas × 3 versões × 3 rodadas) rodam uma de cada vez (limite do plano gratuito
+da Groq) e levaram cerca de 20 minutos (1.195 s, medido na simulação oficial de 26/09/2026).
 
 ## Principal risco e controle (bloco 5, P4)
 
@@ -39,7 +39,7 @@ fictícias, nenhum dado de cliente, e a chave da IA fica fora do código.
 *Como a IA funciona:* a vila mostra a imagem da tela e a tarefa para uma IA que entende imagens
 (Qwen3.8 27B, pela API da Groq), no papel de cada persona. Ela diz onde tocaria, onde hesitaria e qual texto da tela
 guiou a decisão. Cada persona tenta 3 vezes cada versão; o painel mostra "concluiu X de 3" e onde
-travou. A simulação completa levou [TEMPO MEDIDO]. A IA não recebe a resposta certa.
+travou. A simulação completa (36 tentativas) levou cerca de 20 minutos. A IA não recebe a resposta certa.
 
 *Risco e controle:* o risco é confiar na vila como se fosse gente. Por isso: rótulo SIMULAÇÃO em tudo,
 decisão sempre humana e registrada, prompt congelado antes do teste com pessoas, comparação medida
