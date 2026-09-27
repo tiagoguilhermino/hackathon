@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { ModoPagar } from "@/lib/cenarios";
 import {
   BOLETO_DA_ESCOLA,
   CONTAS_A_VENCER,
@@ -35,7 +36,7 @@ import {
 // cartão. Mesmo desenho das janelas do Pix: entrada → revisão → confirmação → comprovante.
 
 export type InicioPagar =
-  { tela: "menu" } | { tela: "conta"; contaId: string } | { tela: "fatura" };
+  { tela: "menu" } | { tela: "conta"; contaId: string } | { tela: "fatura" } | { tela: "codigo" };
 export type SituacaoDaConta = "paga" | "agendada";
 
 type Tela = "menu" | "codigo" | "fatura" | "revisar" | "feito";
@@ -54,6 +55,8 @@ type Comprovante = Pagamento & { agendadoPara: string | null; autenticacao: stri
 
 type Props = {
   inicio: InicioPagar;
+  /** "separadas": aberto pelos atalhos Pagar boleto ou Fatura, sem voltar para o menu do Pagar. */
+  modo: ModoPagar;
   situacaoDasContas: Readonly<Record<string, SituacaoDaConta>>;
   valorDaFaturaEmAberto: number;
   onContaPaga: (contaId: string, situacao: SituacaoDaConta) => void;
@@ -132,6 +135,7 @@ function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 
 export function FluxoPagar({
   inicio,
+  modo,
   situacaoDasContas,
   valorDaFaturaEmAberto,
   onContaPaga,
@@ -140,9 +144,12 @@ export function FluxoPagar({
 }: Props) {
   const contaInicial =
     inicio.tela === "conta" ? (CONTAS_A_VENCER.find((c) => c.id === inicio.contaId) ?? null) : null;
-  const [tela, setTela] = useState<Tela>(
-    contaInicial ? "revisar" : inicio.tela === "fatura" ? "fatura" : "menu",
-  );
+  const telaInicial: Tela = contaInicial
+    ? "revisar"
+    : inicio.tela === "fatura" || inicio.tela === "codigo"
+      ? inicio.tela
+      : "menu";
+  const [tela, setTela] = useState<Tela>(telaInicial);
   const [voltarPara, setVoltarPara] = useState<Tela>("menu");
   const [pagamento, setPagamento] = useState<Pagamento | null>(
     contaInicial ? pagamentoDaConta(contaInicial) : null,
@@ -273,16 +280,18 @@ export function FluxoPagar({
       <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between border-b border-border p-5">
           <div className="flex items-center gap-3">
-            {tela !== "menu" && tela !== "feito" && (
-              <button
-                type="button"
-                aria-label="Voltar"
-                onClick={voltar}
-                className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
-              >
-                <ArrowLeft size={20} />
-              </button>
-            )}
+            {tela !== "menu" &&
+              tela !== "feito" &&
+              !(modo === "separadas" && tela === telaInicial) && (
+                <button
+                  type="button"
+                  aria-label="Voltar"
+                  onClick={voltar}
+                  className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              )}
             <div>
               <h2 className="text-lg font-bold">{titulo}</h2>
               <p className="text-xs text-muted-foreground">{subtitulo}</p>
