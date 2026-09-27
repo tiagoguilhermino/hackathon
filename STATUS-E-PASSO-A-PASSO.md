@@ -8,6 +8,12 @@
 
 ---
 
+## Atualização de 26/09/2026, ~21h30: o que falta é com o time
+
+O Claude fez a parte de M1, M2, M3 e M4 que não depende de pessoas: comparação testada com o `demo.json` real, painel conferido de ponta a ponta, roteiro do vídeo com o resultado real, rascunho da ficha e protocolo do teste. **O que falta, em ordem, e o plano da gravação estão em [PLANO-GRAVACAO-E-PENDENCIAS.md](PLANO-GRAVACAO-E-PENDENCIAS.md).**
+
+---
+
 ## Atualização de 26/09/2026, ~21h: M1 e M2 feitos
 
 O que mudou desde a avaliação abaixo:
@@ -310,6 +316,7 @@ Cada passo diz **quem faz**, **quanto tempo leva**, **se precisa de internet**, 
 3. Abra o arquivo `resultados/pareamento-….csv` no Excel ou no Numbers. Para **cada linha**:
    - confira a classificação: **acerto** (a vila e as pessoas acharam o mesmo problema), **ponto cego** (só as pessoas acharam) ou **alarme falso** (só a vila apontou);
    - corrija a coluna `classificacao_final` se precisar;
+   - se várias linhas da mesma versão falam do **mesmo problema** com palavras diferentes (a vila faz muito isso), deixe a classificação numa só e escreva `repetida` nas outras: elas saem da conta, e o resumo diz quantas foram;
    - escreva `ok` na coluna `conferido`.
 
    Salve como CSV, mantendo o ponto e vírgula.
