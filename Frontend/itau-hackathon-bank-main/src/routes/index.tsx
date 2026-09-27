@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -42,7 +42,28 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { FluxoEmprestimos } from "@/components/fluxo-emprestimos";
+import { FluxoPagar, type InicioPagar, type SituacaoDaConta } from "@/components/fluxo-pagar";
+import { LaboratorioCenarios } from "@/components/laboratorio-cenarios";
+import type { Contrato } from "@/lib/emprestimos";
+import { CONTAS_A_VENCER, FATURA_DO_CARTAO, type ContaAVencer } from "@/lib/pagamentos";
+import {
+  atalhosDaDashboard,
+  inicioDaBusca,
+  lerBusca,
+  mesmaCombinacao,
+  modoLimpo,
+  type BuscaLaboratorio,
+  type Combinacao,
+  type Dashboard,
+  type FluxoPix,
+  type RotuloAtalho,
+  type VersaoRecorrencia,
+} from "@/lib/cenarios";
+
 export const Route = createFileRoute("/")({
+  // O endereço escolhe a combinação: /?cenario=C05 ou /?dash=v1&fluxo=f1&rec=b (src/lib/cenarios.ts)
+  validateSearch: lerBusca,
   head: () => ({
     meta: [
       { title: "Lume — Sua vida financeira em um só lugar" },
@@ -100,23 +121,71 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+// ÍCONE DE CADA ATALHO DA TELA INICIAL
+const ICONES_DOS_ATALHOS: Record<RotuloAtalho, LucideIcon> = {
+  Pix: QrCode,
+  Transferir: Send,
+  Pagar: ReceiptText,
+  "TED/DOC": Send,
+  Depositar: ArrowDownLeft,
+  Boleto: Barcode,
+  "Empréstimos": HandCoins,
+};
+
+// ÍCONE DE CADA CONTA DE "PRÓXIMOS PAGAMENTOS"
+const ICONES_DAS_CONTAS: Record<ContaAVencer["icone"], LucideIcon> = {
+  energia: Zap,
+  celular: Smartphone,
+};
+
+const soDigitos = (texto: string) => texto.replace(/\D/g, "");
+
 function Index() {
+  const busca = Route.useSearch();
+  const navigate = useNavigate();
+  // Cada combinação pedida pelo endereço abre do zero: a chave remonta o app quando ele muda.
+  return (
+    <AppLume
+      key={JSON.stringify(busca)}
+      busca={busca}
+      irPara={(nova) => void navigate({ to: "/", search: nova })}
+    />
+  );
+}
+
+function AppLume({
+  busca,
+  irPara,
+}: {
+  busca: BuscaLaboratorio;
+  irPara: (busca: BuscaLaboratorio) => void;
+}) {
   const [showBalance, setShowBalance] = useState(true);
   const [activeNav, setActiveNav] = useState("Início");
   const [selectedShortcut, setSelectedShortcut] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
 
-  // VERSÃO GERAL DA DASHBOARD (V1, V2 E V3)
-  const [dashVersion, setDashVersion] = useState<"v1" | "v2" | "v3">("v3");
+  // COMBINAÇÃO PEDIDA PELO ENDEREÇO (LABORATÓRIO DE CENÁRIOS; VER src/lib/cenarios.ts)
+  const [inicio] = useState(() => inicioDaBusca(busca));
+  const limpo = modoLimpo(busca);
+  // PEÇAS DA DASHBOARD: TRANSFERÊNCIAS, BOLETO E MINHAS CHAVES (AS DASH V1, V2 E V3 SÃO COMBINAÇÕES)
+  const dashboard: Dashboard = inicio.combinacao;
 
   // MODO DE FLUXO DO PIX (FLUXO 1 VS FLUXO 2)
-  const [pixFlowMode, setPixFlowMode] = useState<"fluxo1" | "fluxo2">("fluxo2");
+  const [pixFlowMode, setPixFlowMode] = useState<FluxoPix>(inicio.combinacao.fluxo);
 
   // ESTADOS DO PIX
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixStep, setPixStep] = useState<"hub" | "qrcode" | "key_entry" | "form" | "confirm" | "my_key">("hub");
-  const [pixVersion, setPixVersion] = useState<"A" | "B" | "C">("A");
+  const [pixVersion, setPixVersion] = useState<VersaoRecorrencia>(inicio.combinacao.recorrencia);
+
+  // COMBINAÇÃO ATUAL: AS BARRAS DE TESTE DENTRO DO PIX PODEM TROCAR O FLUXO E A RECORRÊNCIA
+  const combinacaoAtual: Combinacao = { ...dashboard, fluxo: pixFlowMode, recorrencia: pixVersion };
+  const cenarioAtual =
+    inicio.cenario && mesmaCombinacao(inicio.cenario.combinacao, combinacaoAtual)
+      ? inicio.cenario
+      : null;
   const [showMenuA, setShowMenuA] = useState(false);
   const [contactSearchQuery, setContactSearchQuery] = useState("");
 
@@ -134,6 +203,8 @@ function Index() {
   // ESTADOS DE DEPÓSITO / BOLETO
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositStep, setDepositStep] = useState<"options" | "pix_me" | "boleto_form" | "boleto_generated" | "portabilidade">("options");
+  // "menu" = aberto pelo atalho Depositar; "atalho" = aberto direto pelo atalho Boleto
+  const [depositOrigem, setDepositOrigem] = useState<"menu" | "atalho">("menu");
   const [depositAmount, setDepositAmount] = useState("100,00");
   const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
 
@@ -152,33 +223,21 @@ function Index() {
   // ESTADO DE TRANSFERÊNCIA UNIFICADA (V3)
   const [showTransferHubModal, setShowTransferHubModal] = useState(false);
 
-  // CONFIGURAÇÃO DOS ATALHOS RÁPIDOS CONFORME A VERSÃO DA DASHBOARD
-  const shortcuts: Shortcut[] = dashVersion === "v1"
-    ? [
-        { label: "Pix", icon: QrCode, tone: "primary" },
-        { label: "Pagar", icon: ReceiptText },
-        { label: "TED/DOC", icon: Send },
-        { label: "Depositar", icon: ArrowDownLeft },
-        { label: "Recarga", icon: Smartphone },
-        { label: "Empréstimos", icon: HandCoins },
-      ]
-    : dashVersion === "v2"
-    ? [
-        { label: "Pix", icon: QrCode, tone: "primary" },
-        { label: "Pagar", icon: ReceiptText },
-        { label: "TED/DOC", icon: Send },
-        { label: "Boleto", icon: Barcode },
-        { label: "Recarga", icon: Smartphone },
-        { label: "Empréstimos", icon: HandCoins },
-      ]
-    : [
-        // DASH V3: REÚNE PIX E TED/DOC DENTRO DE "TRANSFERIR"
-        { label: "Transferir", icon: Send, tone: "primary" },
-        { label: "Pagar", icon: ReceiptText },
-        { label: "Depositar", icon: ArrowDownLeft },
-        { label: "Recarga", icon: Smartphone },
-        { label: "Empréstimos", icon: HandCoins },
-      ];
+  // PAGAR (BOLETO, CONTAS A VENCER E FATURA) E EMPRÉSTIMOS: JANELAS EM src/components/
+  const [pagar, setPagar] = useState<InicioPagar | null>(null);
+  const [situacaoDasContas, setSituacaoDasContas] = useState<Record<string, SituacaoDaConta>>({});
+  const [valorPagoDaFatura, setValorPagoDaFatura] = useState(0);
+  const [emprestimosAbertos, setEmprestimosAbertos] = useState(false);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const faturaEmAberto = Math.max(0, Math.round((FATURA_DO_CARTAO.valor - valorPagoDaFatura) * 100) / 100);
+
+  // CONFIGURAÇÃO DOS ATALHOS RÁPIDOS CONFORME AS PEÇAS DA DASHBOARD
+  // (V1: Pix, Pagar, TED/DOC, Depositar · V2: Pix, Pagar, TED/DOC, Boleto · V3: Transferir, Pagar, Depositar)
+  const shortcuts: Shortcut[] = atalhosDaDashboard(dashboard).map((label) => ({
+    label,
+    icon: ICONES_DOS_ATALHOS[label],
+    ...(label === "Pix" || label === "Transferir" ? { tone: "primary" as const } : {}),
+  }));
 
   const openPixModal = () => {
     setSelectedShortcut("Pix");
@@ -188,12 +247,14 @@ function Index() {
 
   const openDepositModal = () => {
     setSelectedShortcut("Depositar");
+    setDepositOrigem("menu");
     setDepositStep("options");
     setShowDepositModal(true);
   };
 
   const openBoletoModal = () => {
     setSelectedShortcut("Boleto");
+    setDepositOrigem("atalho");
     setDepositStep("boleto_form");
     setShowDepositModal(true);
   };
@@ -231,9 +292,11 @@ function Index() {
       setRecipientBank("Banco Lume");
       setPixAmount("148,90");
     } else {
-      setRecipientName("Contato Consultado da Base");
-      setRecipientKey(keyText);
-      setRecipientBank("Banco Lume");
+      // Chave de um contato salvo (ex.: o celular da Ana Paula) mostra o nome dele na confirmação.
+      const contato = mockContacts.find((c) => soDigitos(c.key) === soDigitos(keyText));
+      setRecipientName(contato?.name ?? "Contato Consultado da Base");
+      setRecipientKey(contato?.key ?? keyText);
+      setRecipientBank(contato?.bank ?? "Banco Lume");
     }
     setPixStep("form");
   };
@@ -276,41 +339,10 @@ Status: Aguardando Pagamento
 
   return (
     <main className="min-h-screen bg-canvas pb-28 text-foreground lg:pb-10">
-      {/* SELETOR DE VERSÃO DA DASHBOARD (V1, V2 E V3) */}
-      <div className="bg-black/90 text-white px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="font-bold uppercase tracking-wider text-highlight">Versão do App:</span>
-          <span className="text-gray-300">
-            {dashVersion === "v1" && "Dash V1 (TED/DOC + Depositar)"}
-            {dashVersion === "v2" && "Dash V2 (TED/DOC + Boleto)"}
-            {dashVersion === "v3" && "Dash V3 (Transferir reunindo Pix e TED/DOC)"}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5 bg-white/10 p-1 rounded-md">
-          <button
-            type="button"
-            onClick={() => setDashVersion("v1")}
-            className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v1" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
-          >
-            Dash V1
-          </button>
-          <button
-            type="button"
-            onClick={() => setDashVersion("v2")}
-            className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v2" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
-          >
-            Dash V2
-          </button>
-          <button
-            type="button"
-            onClick={() => setDashVersion("v3")}
-            className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v3" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
-          >
-            Dash V3 (Unificada)
-          </button>
-        </div>
-      </div>
+      {/* LABORATÓRIO DE CENÁRIOS: DASH V1/V2/V3, PEÇAS COMBINÁVEIS E CENÁRIOS (SOME NO MODO LIMPO) */}
+      {!limpo && (
+        <LaboratorioCenarios combinacao={combinacaoAtual} cenario={cenarioAtual} irPara={irPara} />
+      )}
 
       {/* HEADER PRINCIPAL */}
       <header className="bg-primary text-primary-foreground">
@@ -428,7 +460,8 @@ Status: Aguardando Pagamento
         <section className="relative -mt-7 lg:-mt-11" aria-label="Acessos rápidos">
           <div className="overflow-hidden rounded-lg bg-surface shadow-card">
             <div className="grid grid-cols-4 lg:grid-cols-6">
-              {shortcuts.map(({ label, icon: Icon, tone }, index) => (
+              {/* NO CELULAR, 4 POR LINHA: A PARTIR DO 5º ATALHO, ELES VÃO PARA A 2ª LINHA (NENHUM FICA ESCONDIDO) */}
+              {shortcuts.map(({ label, icon: Icon, tone }) => (
                 <button
                   key={label}
                   type="button"
@@ -438,9 +471,11 @@ Status: Aguardando Pagamento
                     else if (label === "Boleto") openBoletoModal();
                     else if (label === "TED/DOC") openTedModal();
                     else if (label === "Transferir") openTransferHubModal();
+                    else if (label === "Pagar") setPagar({ tela: "menu" });
+                    else if (label === "Empréstimos") setEmprestimosAbertos(true);
                     else setSelectedShortcut(label);
                   }}
-                  className={`group flex min-h-24 flex-col items-center justify-center gap-2 border-border px-2 py-4 text-xs font-semibold transition hover:bg-muted focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary ${index > 3 ? "hidden lg:flex" : ""}`}
+                  className={`group flex min-h-24 flex-col items-center justify-center gap-2 border-border px-2 py-4 text-xs font-semibold transition hover:bg-muted focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary`}
                 >
                   <span
                     className={`grid h-10 w-10 place-items-center rounded-full transition group-hover:-translate-y-0.5 ${tone === "primary" ? "bg-accent text-accent-foreground" : "bg-muted text-foreground"}`}
@@ -452,7 +487,7 @@ Status: Aguardando Pagamento
               ))}
             </div>
           </div>
-          {selectedShortcut && !showPixModal && !showDepositModal && !showTedModal && !showTransferHubModal && (
+          {selectedShortcut && !showPixModal && !showDepositModal && !showTedModal && !showTransferHubModal && !pagar && !emprestimosAbertos && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3 text-sm shadow-sm">
               <p className="min-w-0 truncate">
                 <span className="font-bold">{selectedShortcut}</span> selecionado
@@ -494,11 +529,12 @@ Status: Aguardando Pagamento
               <div className="mt-6 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Fatura atual</p>
-                  <p className="mt-1 font-display text-2xl font-bold">{showBalance ? formatCurrency(1893.42) : "R$ •••••"}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Fecha em 8 dias</p>
+                  <p className="mt-1 font-display text-2xl font-bold">{showBalance ? formatCurrency(faturaEmAberto) : "R$ •••••"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{FATURA_DO_CARTAO.fechamento}</p>
                 </div>
                 <button
                   type="button"
+                  onClick={() => setPagar({ tela: "fatura" })}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:bg-primary-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   Ver fatura <ChevronRight size={17} />
@@ -508,10 +544,15 @@ Status: Aguardando Pagamento
               <div className="mt-6">
                 <div className="mb-2 flex items-center justify-between gap-4 text-xs">
                   <span className="font-medium">Limite utilizado</span>
-                  <span className="text-muted-foreground">R$ 1.893 de R$ 7.500</span>
+                  <span className="text-muted-foreground">
+                    {formatCurrency(faturaEmAberto)} de {formatCurrency(FATURA_DO_CARTAO.limite)}
+                  </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full w-1/4 rounded-full bg-secondary" />
+                  <div
+                    className="h-full rounded-full bg-secondary transition-all"
+                    style={{ width: `${(faturaEmAberto / FATURA_DO_CARTAO.limite) * 100}%` }}
+                  />
                 </div>
               </div>
             </section>
@@ -519,13 +560,26 @@ Status: Aguardando Pagamento
             <section className="rounded-lg bg-surface p-5 shadow-card sm:p-6" aria-labelledby="payments-heading">
               <div className="flex items-center justify-between gap-3">
                 <h2 id="payments-heading" className="text-lg font-bold">Próximos pagamentos</h2>
-                <button type="button" className="text-sm font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary">
+                <button
+                  type="button"
+                  onClick={() => setPagar({ tela: "menu" })}
+                  className="text-sm font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                >
                   Ver todos
                 </button>
               </div>
               <div className="mt-5 divide-y divide-border">
-                <PaymentRow icon={Zap} title="Energia" date="Vence amanhã" value="R$ 184,70" />
-                <PaymentRow icon={Smartphone} title="Celular" date="Vence 02 out" value="R$ 69,90" />
+                {CONTAS_A_VENCER.map((conta) => (
+                  <PaymentRow
+                    key={conta.id}
+                    icon={ICONES_DAS_CONTAS[conta.icone]}
+                    title={conta.nome}
+                    date={conta.vencimentoTexto}
+                    value={formatCurrency(conta.valor)}
+                    situacao={situacaoDasContas[conta.id] ?? null}
+                    onClick={() => setPagar({ tela: "conta", contaId: conta.id })}
+                  />
+                ))}
               </div>
             </section>
           </div>
@@ -570,7 +624,7 @@ Status: Aguardando Pagamento
       </div>
 
       {/* MODAL DE TRANSFERÊNCIA UNIFICADA (EXCLUSIVO DA DASH V3) */}
-      {showTransferHubModal && dashVersion === "v3" && (
+      {showTransferHubModal && dashboard.transferencias === "unificadas" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-lg overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-border p-5">
@@ -636,7 +690,8 @@ Status: Aguardando Pagamento
       {showPixModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            {/* BARRA SUPERIOR DE CONTROLE DO HACKATHON */}
+            {/* BARRA SUPERIOR DE CONTROLE DO HACKATHON (SOME NO MODO LIMPO; O ENDEREÇO ESCOLHE FLUXO E VERSÃO) */}
+            {!limpo && (
             <div className="bg-primary px-5 py-3 text-primary-foreground border-b border-primary-foreground/20">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
@@ -712,6 +767,7 @@ Status: Aguardando Pagamento
                 </div>
               )}
             </div>
+            )}
 
             {/* HEADER DO MODAL */}
             <div className="flex items-center justify-between border-b border-border p-5">
@@ -794,8 +850,8 @@ Status: Aguardando Pagamento
                     </div>
                   </button>
 
-                  {/* NA DASH V2 E V3: EXIBIR BOTÃO "MINHAS CHAVES & QR CODE" DENTRO DO PIX */}
-                  {(dashVersion === "v2" || dashVersion === "v3") && (
+                  {/* MINHAS CHAVES DENTRO DO PIX (DASH V2 E V3): BOTÃO "MINHAS CHAVES & QR CODE" */}
+                  {dashboard.chaves === "pix" && (
                     <button
                       type="button"
                       onClick={() => setPixStep("my_key")}
@@ -859,7 +915,7 @@ Status: Aguardando Pagamento
             {/* FLUXO 2: PIX COPIA E COLA DESTACADO */}
             {pixStep === "hub" && pixFlowMode === "fluxo2" && (
               <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-                {(dashVersion === "v2" || dashVersion === "v3") && (
+                {dashboard.chaves === "pix" && (
                   <button
                     type="button"
                     onClick={() => setPixStep("my_key")}
@@ -1743,7 +1799,7 @@ Status: Aguardando Pagamento
           <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-border p-5">
               <div className="flex items-center gap-3">
-                {depositStep !== "options" && dashVersion === "v1" && (
+                {depositStep !== "options" && depositOrigem === "menu" && (
                   <button
                     type="button"
                     onClick={() => setDepositStep("options")}
@@ -1754,11 +1810,11 @@ Status: Aguardando Pagamento
                 )}
                 <div>
                   <h2 className="text-lg font-bold">
-                    {dashVersion === "v1" ? "Depositar na Conta Lume" : "Boletos Bancários (Conta Lume)"}
+                    {depositOrigem === "menu" ? "Depositar na Conta Lume" : "Boletos Bancários (Conta Lume)"}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {dashVersion === "v1" && depositStep === "options" && "Escolha como deseja colocar dinheiro na sua conta"}
-                    {dashVersion === "v1" && depositStep === "pix_me" && "Ver chaves Pix (E-mail, Aleatória) e QR Code da conta"}
+                    {depositStep === "options" && "Escolha como deseja colocar dinheiro na sua conta"}
+                    {depositStep === "pix_me" && "Ver chaves Pix (E-mail, Aleatória) e QR Code da conta"}
                     {depositStep === "boleto_form" && "Informe o valor para gerar o boleto sem taxas"}
                     {depositStep === "boleto_generated" && "Boleto bancário gerado com sucesso"}
                     {depositStep === "portabilidade" && "Traga seu salário para o Banco Lume"}
@@ -1782,8 +1838,10 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {depositStep === "options" && dashVersion === "v1" && (
+            {/* MENU DEPOSITAR: SÓ MOSTRA O QUE ESTA COMBINAÇÃO PÕE NELE (MINHAS CHAVES E/OU BOLETO) + PORTABILIDADE */}
+            {depositStep === "options" && (
               <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                {dashboard.chaves === "deposito" && (
                 <button
                   type="button"
                   onClick={() => setDepositStep("pix_me")}
@@ -1800,7 +1858,9 @@ Status: Aguardando Pagamento
                   </div>
                   <ChevronRight size={19} className="text-muted-foreground" />
                 </button>
+                )}
 
+                {dashboard.boleto === "deposito" && (
                 <button
                   type="button"
                   onClick={() => setDepositStep("boleto_form")}
@@ -1817,6 +1877,7 @@ Status: Aguardando Pagamento
                   </div>
                   <ChevronRight size={19} className="text-muted-foreground" />
                 </button>
+                )}
 
                 <button
                   type="button"
@@ -1837,7 +1898,7 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {depositStep === "pix_me" && dashVersion === "v1" && (
+            {depositStep === "pix_me" && (
               <div className="p-6 space-y-5 text-center max-h-[80vh] overflow-y-auto">
                 <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -2012,6 +2073,29 @@ Status: Aguardando Pagamento
         </div>
       )}
 
+      {/* AMBIENTE DE PAGAR: BOLETO, CONTAS A VENCER E FATURA DO CARTÃO */}
+      {pagar && (
+        <FluxoPagar
+          inicio={pagar}
+          situacaoDasContas={situacaoDasContas}
+          valorDaFaturaEmAberto={faturaEmAberto}
+          onContaPaga={(contaId, situacao) =>
+            setSituacaoDasContas((atual) => ({ ...atual, [contaId]: situacao }))
+          }
+          onFaturaPaga={(valor) => setValorPagoDaFatura((atual) => atual + valor)}
+          onFechar={() => setPagar(null)}
+        />
+      )}
+
+      {/* AMBIENTE DE EMPRÉSTIMOS: SIMULAR, CONTRATAR, CONSIGNADO E MEUS EMPRÉSTIMOS */}
+      {emprestimosAbertos && (
+        <FluxoEmprestimos
+          contratos={contratos}
+          onContratado={(contrato) => setContratos((atual) => [...atual, contrato])}
+          onFechar={() => setEmprestimosAbertos(false)}
+        />
+      )}
+
       {/* BOTÃO FLUTUANTE DE NAVEGAÇÃO MOBILE */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden" aria-label="Navegação principal">
         <div className="mx-auto grid max-w-lg grid-cols-5 items-end">
@@ -2044,9 +2128,28 @@ Status: Aguardando Pagamento
   );
 }
 
-function PaymentRow({ icon: Icon, title, date, value }: { icon: LucideIcon; title: string; date: string; value: string }) {
+function PaymentRow({
+  icon: Icon,
+  title,
+  date,
+  value,
+  situacao,
+  onClick,
+}: {
+  icon: LucideIcon;
+  title: string;
+  date: string;
+  value: string;
+  situacao: SituacaoDaConta | null;
+  onClick: () => void;
+}) {
   return (
-    <button type="button" className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-4 text-left first:pt-0 last:pb-0 focus-visible:outline-2 focus-visible:outline-primary">
+    <button
+      type="button"
+      disabled={situacao !== null}
+      onClick={onClick}
+      className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-4 text-left first:pt-0 last:pb-0 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default"
+    >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-muted text-foreground">
         <Icon size={19} />
       </span>
@@ -2054,7 +2157,14 @@ function PaymentRow({ icon: Icon, title, date, value }: { icon: LucideIcon; titl
         <span className="block truncate text-sm font-bold">{title}</span>
         <span className="block text-xs text-muted-foreground">{date}</span>
       </span>
-      <span className="shrink-0 text-sm font-semibold">{value}</span>
+      <span className="shrink-0 text-right text-sm font-semibold">
+        {value}
+        {situacao && (
+          <span className="block text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+            {situacao === "paga" ? "Paga" : "Agendada"}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
