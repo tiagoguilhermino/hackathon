@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, FlaskConical, Play, Smartphone, Square } from "lucide-react";
+import { BarChart3, FlaskConical, Layers, Play, Smartphone, Square } from "lucide-react";
 import { SimulationBadge } from "@/components/common/PrototypeNotice";
 import { ConfigPanel } from "@/components/lab/ConfigPanel";
 import { DecisionLog, type LogEntry } from "@/components/lab/DecisionLog";
 import { LlmModeToggle } from "@/components/lab/LlmModeToggle";
 import { SimulationSlot, type SlotView } from "@/components/lab/SimulationSlot";
 import { SCROLL_DOWN, SCROLL_UP } from "@/lib/a11y/extract";
+import { FLOWS } from "@/lib/bank/flows";
+import { DEFAULT_LAYOUT, LAYOUT_PRESETS, PRESET_IDS, PRESET_NAMES, layoutName, type AppLayout, type PresetId } from "@/lib/design/variations";
 import { estimateCostUsd } from "@/lib/llm/pricing";
 import { DEFAULT_PERSONA_CONFIG } from "@/lib/personas/config";
 import { generatePersonaBase } from "@/lib/personas/generator";
@@ -25,9 +27,13 @@ const DEFAULT_CONFIG: SimulationConfig = {
   mockLatencyMs: 120,
   concurrency: 3,
   llmMode: "mock",
+  layout: DEFAULT_LAYOUT,
 };
 
 const MODE_KEY = "itau-ux-lab:llm-mode";
+
+/** Id do lote de "Testar nos layouts marcados": junta as simulações dos mesmos agentes em layouts diferentes. */
+const newBatchId = () => `lote-${Date.now().toString(36)}`;
 
 type Status = "idle" | "running" | "done";
 interface LlmStatus {
@@ -88,20 +94,38 @@ export default function LabPage() {
   const updateView = (slot: number, patch: Partial<SlotView>) =>
     setViews((prev) => prev.map((v, i) => (i === slot ? { ...v, ...patch } : v)));
 
-  const start = async () => {
+  /**
+   * Roda a simulação no layout escolhido ou, com vários layouts, os MESMOS agentes em cada um
+   * (um lote): é isso que o Dashboard compara para dizer qual layout funciona melhor por perfil.
+   */
+  const start = async (layouts: AppLayout[] = [config.layout ?? DEFAULT_LAYOUT]) => {
     const personas = stratifiedSample(base, config.agentCount, config.base.seed);
     stopRef.current = false;
     setStatus("running");
-    setOutcomes(EMPTY_OUTCOMES);
-    setLogs([]);
     setUsage({ inputTokens: 0, outputTokens: 0 });
     setError(null);
-    setViews(Array.from({ length: slotCount }, () => EMPTY_VIEW));
-
+    const batchId = layouts.length > 1 ? newBatchId() : undefined;
     const slots = slotRefs.current.slice(0, slotCount).filter((s): s is AppSlot => Boolean(s));
 
     try {
-      const run = await runSimulation(config, personas, slots, {
+      for (const [i, layout] of layouts.entries()) {
+        if (stopRef.current) break;
+        setBatch(layouts.length > 1 ? `Layout ${i + 1} de ${layouts.length}: ${layoutName(layout)}` : null);
+        setOutcomes(EMPTY_OUTCOMES);
+        setLogs([]);
+        setViews(Array.from({ length: slotCount }, () => EMPTY_VIEW));
+        await runOne({ ...config, layout, batchId }, personas, slots);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setStatus("done");
+    }
+  };
+
+  const runOne = async (runConfig: SimulationConfig, personas: typeof base, slots: AppSlot[]) => {
+    {
+      const run = await runSimulation(runConfig, personas, slots, {
         shouldStop: () => stopRef.current,
         onAgentStart: (slot, agentIndex, persona) => updateView(slot, { persona, agentIndex, cursor: null }),
         onDecision: ({ slot, agentIndex, persona, tree, response, target }) => {
@@ -152,12 +176,24 @@ export default function LabPage() {
         },
       });
       if (run.agents.some((a) => a.outcome !== "error")) saveRun(run);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setStatus("done");
     }
   };
+
+  // Layouts marcados para o lote (os mesmos agentes em cada um), com o início do Pix escolhido acima.
+  const [compareIds, setCompareIds] = useState<PresetId[]>(["v1", "v2", "v3"]);
+  const [batch, setBatch] = useState<string | null>(null);
+  const batchLayouts = compareIds.map((id) => ({ ...LAYOUT_PRESETS[id], pixStart: (config.layout ?? DEFAULT_LAYOUT).pixStart }));
+
+  // Parado, o celular mostra o layout e a versão escolhidos (o agente começa assim).
+  useEffect(() => {
+    if (status === "running") return;
+    const t = window.setTimeout(() => {
+      slotRefs.current.forEach((s) =>
+        s?.dispatch({ actionId: "__reset", value: FLOWS[config.flowId].versions ? config.version : undefined, layout: config.layout }),
+      );
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [config.layout, config.version, config.flowId, status, slotCount]);
 
   const doneCount = Object.values(outcomes).reduce((a, b) => a + b, 0);
   const total = Math.min(config.agentCount, base.length);
@@ -203,12 +239,41 @@ export default function LabPage() {
           ) : (
             <button
               type="button"
-              onClick={start}
+              onClick={() => void start()}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-itau-orange py-2.5 font-semibold text-white hover:bg-itau-orange-dark"
             >
               <Play size={16} /> Executar simulação
             </button>
           )}
+          <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <Layers size={16} className="text-itau-orange" /> Comparar layouts
+            </div>
+            <p className="text-xs text-neutral-500">
+              Os mesmos agentes fazem a mesma tarefa em cada layout marcado. O Dashboard mostra qual funcionou melhor para cada perfil.
+            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              {PRESET_IDS.map((id) => (
+                <label key={id} className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={compareIds.includes(id)}
+                    disabled={status === "running"}
+                    onChange={(e) => setCompareIds((prev) => (e.target.checked ? [...prev, id] : prev.filter((x) => x !== id)))}
+                  />
+                  {PRESET_NAMES[id]}
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={status === "running" || compareIds.length < 2}
+              onClick={() => void start(batchLayouts)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-itau-orange py-2 text-sm font-semibold text-itau-orange hover:bg-itau-orange/5 disabled:opacity-40"
+            >
+              <Layers size={16} /> Testar nos layouts marcados
+            </button>
+          </div>
         </aside>
 
         <section className={`grid h-fit justify-center gap-4 ${slotCount > 1 ? "sm:grid-cols-2" : ""}`}>
@@ -227,6 +292,9 @@ export default function LabPage() {
 
         <section className="flex min-h-0 flex-col gap-3">
           <div className="rounded-xl bg-white p-4 shadow-sm">
+            <p className="mb-2 text-xs text-neutral-500">
+              {batch ?? `Layout: ${layoutName(config.layout)}`}
+            </p>
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-semibold">Progresso</span>
               <span className="tabular-nums text-neutral-500">

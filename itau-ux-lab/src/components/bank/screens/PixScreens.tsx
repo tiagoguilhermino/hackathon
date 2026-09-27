@@ -1,8 +1,8 @@
 "use client";
 
-import { CalendarClock, CheckCircle2, Ellipsis, Repeat, User } from "lucide-react";
+import { CalendarClock, CheckCircle2, ClipboardPaste, Copy, Ellipsis, KeyRound, Repeat, User } from "lucide-react";
 import { SCREEN_TITLES } from "@/lib/bank/flows";
-import { ACCOUNT, PIX_CONTACTS, formatBRL, parseCurrency, pixRecipient } from "@/lib/bank/state";
+import { ACCOUNT, COPY_PASTE_CHARGE, PIX_CONTACTS, formatBRL, parseCurrency, pixRecipient } from "@/lib/bank/state";
 import { useBank } from "../BankContext";
 import { A11yText, ActionButton, ActionInput, Card, ErrorAlert } from "../primitives";
 import { ScreenLayout } from "../ScreenLayout";
@@ -23,7 +23,7 @@ export function PixScreen() {
         <A11yText role="heading" className="text-xl font-semibold text-itau-navy">
           Para quem você quer transferir?
         </A11yText>
-        {state.pixVersion && <RecentContacts />}
+        {state.layout.pixStart === "contatos" ? <RecentContacts /> : <CopyPaste />}
         <ActionInput
           actionId="pix-key"
           label="Chave Pix (CPF, celular, e-mail ou aleatória)"
@@ -39,12 +39,48 @@ export function PixScreen() {
           prefix="R$"
         />
         <ErrorAlert />
+        {state.layout.keys === "pix" && (
+          <ActionButton actionId="pix-my-keys" variant="secondary" prominence="normal" className="w-full !border-neutral-200 text-sm">
+            <span className="flex items-center justify-center gap-2">
+              <KeyRound size={16} /> Minhas chaves e QR Code
+            </span>
+          </ActionButton>
+        )}
       </div>
     </ScreenLayout>
   );
 }
 
-/** Contatos recentes (só no fluxo da vila): tocar preenche a chave. */
+/** Layout "Copia e Cola e chave" (Fluxo 2 do Iury): colar o código em vez de escolher um contato. */
+function CopyPaste() {
+  const { state } = useBank();
+  return (
+    <Card className="space-y-3 border border-itau-orange/30">
+      <div className="flex items-center gap-2">
+        <Copy size={18} className="text-itau-orange" aria-hidden />
+        <A11yText className="font-semibold text-itau-navy">Pix Copia e Cola</A11yText>
+      </div>
+      <A11yText className="text-xs text-neutral-500">Cole o código Pix que você recebeu para pagar.</A11yText>
+      {state.pix.pasted ? (
+        <A11yText className="rounded-lg bg-neutral-50 p-2 text-xs text-neutral-600">
+          Código colado: cobrança de {COPY_PASTE_CHARGE.payee} · {formatBRL(COPY_PASTE_CHARGE.amount)}
+        </A11yText>
+      ) : (
+        <ActionButton actionId="pix-paste" variant="secondary" className="w-full text-sm">
+          <span className="flex items-center justify-center gap-2">
+            <ClipboardPaste size={16} /> Colar código recebido
+          </span>
+        </ActionButton>
+      )}
+      <ActionButton actionId="pix-cc-continue" className="w-full text-sm">
+        Continuar com Copia e Cola
+      </ActionButton>
+      <A11yText className="pt-1 text-sm text-neutral-600">Ou transfira por chave Pix:</A11yText>
+    </Card>
+  );
+}
+
+/** Contatos recentes (layout "Contatos salvos", Fluxo 1 do Iury): tocar preenche a chave. */
 function RecentContacts() {
   return (
     <div className="space-y-2">
@@ -105,6 +141,7 @@ function RepeatOption() {
 
 export function PixConfirm() {
   const { state } = useBank();
+  if (state.pix.mode === "copia") return <CopyPasteConfirm />;
   const recipient = pixRecipient(state.pix.key);
   const version = state.pixVersion;
   return (
@@ -185,6 +222,33 @@ export function PixSuccess() {
         <A11yText role="heading" className="text-xl font-semibold text-itau-navy">
           Pix enviado!
         </A11yText>
+      </div>
+    </ScreenLayout>
+  );
+}
+
+/** Confirmação do pagamento por Pix Copia e Cola (sem opção de repetir). */
+function CopyPasteConfirm() {
+  return (
+    <ScreenLayout
+      screenId="pix-confirm"
+      title={SCREEN_TITLES["pix-confirm"]}
+      footer={
+        <ActionButton actionId="pix-confirm" className="w-full">
+          Pagar {formatBRL(COPY_PASTE_CHARGE.amount)}
+        </ActionButton>
+      }
+    >
+      <div className="space-y-4 p-4">
+        <A11yText role="heading" className="text-xl font-semibold text-itau-navy">
+          Confira o pagamento
+        </A11yText>
+        <Card className="space-y-2 text-sm">
+          <A11yText>Pix Copia e Cola</A11yText>
+          <A11yText>Recebedor: {COPY_PASTE_CHARGE.payee}</A11yText>
+          <A11yText>Valor: {formatBRL(COPY_PASTE_CHARGE.amount)}</A11yText>
+        </Card>
+        <A11yText className="text-center text-xs text-neutral-500">Transação fictícia de teste</A11yText>
       </div>
     </ScreenLayout>
   );

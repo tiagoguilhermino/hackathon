@@ -3,7 +3,9 @@
 import { AGE_BANDS, type AgeBand, type Persona } from "@/types/persona";
 import type { FlowId, ScreenVersion, SimulationConfig } from "@/types/simulation";
 import { FLOWS } from "@/lib/bank/flows";
+import { DEFAULT_LAYOUT } from "@/lib/design/variations";
 import { PROFESSION_LABELS } from "@/lib/personas/config";
+import { LayoutPicker } from "./LayoutPicker";
 import { WeightEditor } from "./WeightEditor";
 
 const AGE_LABELS = Object.fromEntries(AGE_BANDS.map((b) => [b, `${b} anos`])) as Record<AgeBand, string>;
@@ -95,6 +97,10 @@ export function ConfigPanel({ config, onChange, base, disabled, live }: ConfigPa
             </span>
           </label>
         )}
+        <div className="space-y-1.5 rounded-lg border border-neutral-200 p-2.5">
+          <span className="block text-sm text-neutral-600">Layout do app</span>
+          <LayoutPicker layout={config.layout ?? DEFAULT_LAYOUT} onChange={(layout) => set("layout", layout)} />
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <NumberField label="Agentes" value={config.agentCount} min={1} max={200} onChange={(v) => set("agentCount", v)} />
           <NumberField label="Tamanho da base" value={config.base.size} min={10} max={5000} step={50} onChange={(v) => setBase("size", v)} />

@@ -2,7 +2,8 @@ import type { AnalystReport, DesignerReport, HumanDecision } from "@/types/analy
 import type { SimulationRun } from "@/types/simulation";
 
 const KEY = "itau-ux-lab:runs:v2";
-const MAX_RUNS = 5;
+// Lotes de layouts geram 3 simulações de uma vez: guardamos as 12 mais recentes.
+const MAX_RUNS = 12;
 
 export function loadRuns(): SimulationRun[] {
   try {

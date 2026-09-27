@@ -1,11 +1,8 @@
 import * as z from "zod/v4";
-import type { AnalystReport, DesignProposal, DesignerReport, LayoutRecommendation, SimulationStats } from "@/types/analytics";
-import type { SegmentDimension } from "@/types/persona";
+import type { AnalystReport, DesignProposal, DesignerReport, SimulationStats } from "@/types/analytics";
 import type { ScreenSnapshot } from "@/types/simulation";
 import { JARGON_GLOSSARY } from "../a11y/cognitive-load";
-import { DIMENSION_LABELS } from "../analytics/stats";
 import { SCREEN_TITLES } from "../bank/flows";
-import { VARIATIONS, VARIATION_IDS, VARIATION_REASONS, variationsForScreen } from "../design/variations";
 import { DEFAULT_MOCK_LATENCY_MS, callLLM, resolveLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
 import { compactJson } from "../llm/compact";
 
@@ -14,8 +11,6 @@ export interface DesignerRequest {
   stats: SimulationStats;
   screens: Record<string, ScreenSnapshot>;
   mode?: "mock" | "live";
-  /** Versão da tela testada (A/B/C), para não recomendar a mesma */
-  screenVersion?: string;
 }
 
 const title = (id: string) => SCREEN_TITLES[id as keyof typeof SCREEN_TITLES] ?? id;
@@ -33,11 +28,6 @@ Regras:
 - Proponha apenas mudanças sustentadas pelos dados recebidos (métricas, anomalias, falas dos agentes ou conteúdo da tela). Não invente problemas que os dados não mostram (ex.: tamanho de fonte) nem proponha algo que a tela já tem.
 - Escreva para o time de produto, em português, sem nomes de campos técnicos dos dados (use "botão pouco destacado", não "prominence low").
 - Priorize pelo impacto no segmento mais prejudicado. No máximo 8 propostas, ids curtos e únicos (ex.: "p1").
-
-Além das propostas, você recebe o catálogo de variações de tela já desenhadas pelo time no app Lume. Em layouts, para cada perfil de cliente que ficou bem abaixo da média (use os segmentos das anomalias, no formato "Dimensão: valor"), escolha no catálogo as variações que atacam a tela onde esse perfil parou:
-- variationIds: só ids do catálogo; não repita a versão que já foi testada nesta simulação;
-- rationale: 1 a 2 frases citando os números do perfil e por que a variação pode ajudar; cite a variação pelo nome (ex.: "Repetir C · com texto"), nunca pelo id;
-- se nenhuma variação do catálogo serve para um perfil, deixe o perfil de fora. No máximo 4 perfis.
 - Os dados vêm de uma simulação com clientes sintéticos: cada proposta é uma hipótese para testar com pessoas, e quem decide se aplica é o designer ou o PO. Não prometa ganho medido.`;
 
 const DesignerSchema = z.object({
@@ -53,32 +43,7 @@ const DesignerSchema = z.object({
       relatedAnomalies: z.array(z.string()),
     }),
   ),
-  layouts: z.array(
-    z.object({
-      segment: z.string(),
-      variationIds: z.array(z.enum(VARIATION_IDS)),
-      rationale: z.string(),
-    }),
-  ),
 });
-
-/** Catálogo como o agente lê: o que cada variação muda e em que tela atua. */
-const catalogForPrompt = () => Object.values(VARIATIONS).map((v) => ({ id: v.id, nome: v.name, muda: v.change, tela: v.screen }));
-
-/**
- * Resumo enxuto por perfil (literacia e idade): quantos, quantos concluíram e onde mais pararam.
- * Enxuto de propósito: o plano gratuito da Groq aceita 8.000 tokens por minuto por chave.
- */
-function profilesForPrompt(stats: SimulationStats) {
-  return (["literacyBand", "ageBand"] as SegmentDimension[]).flatMap((dim) =>
-    (stats.bySegment[dim] ?? []).map((s) => {
-      const worst = stats.segmentScreen
-        .filter((x) => x.dimension === dim && x.segment === s.segment)
-        .sort((a, b) => b.dropOffRate - a.dropOffRate)[0];
-      return { perfil: `${DIMENSION_LABELS[dim]}: ${s.segment}`, agentes: s.agents, concluiram: s.successes, parouMaisEm: worst?.dropOffRate ? worst.screenId : "" };
-    }),
-  );
-}
 
 export function buildDesignerPrompt(req: DesignerRequest): LlmPrompt {
   const screens = Object.values(req.screens).map((s) => ({
@@ -101,13 +66,7 @@ Anomalias: ${compactJson(req.analyst.anomalies)}
 ${compactJson(req.stats.byScreen)}
 
 ## Conteúdo das telas
-${compactJson(screens)}
-
-## Desempenho por perfil (quem concluiu e onde mais parou)
-${compactJson(profilesForPrompt(req.stats))}
-
-## Catálogo de variações de tela do Lume${req.screenVersion ? ` (versão testada nesta simulação: ${req.screenVersion})` : ""}
-${compactJson(catalogForPrompt())}`,
+${compactJson(screens)}`,
   };
 }
 
@@ -208,36 +167,7 @@ export function mockDesigner(req: DesignerRequest): DesignerReport {
     });
   }
 
-  return { proposals: proposals.slice(0, 8), layouts: mockLayouts(req), mode: "mock" };
-}
-
-const pct = (v: number) => `${Math.round(v * 100)}%`;
-
-/**
- * Variações por perfil (modo Simulado): para cada faixa de literacia ou de idade bem abaixo da
- * média, a tela onde esse perfil mais parou decide a variação do catálogo (variationsForScreen).
- */
-export function mockLayouts(req: DesignerRequest): LayoutRecommendation[] {
-  const { stats } = req;
-  const out: LayoutRecommendation[] = [];
-  for (const dim of ["literacyBand", "ageBand"] as SegmentDimension[]) {
-    for (const seg of stats.bySegment[dim] ?? []) {
-      if (seg.agents < 3 || stats.successRate - seg.successRate < 0.15) continue;
-      const worst = stats.segmentScreen
-        .filter((s) => s.dimension === dim && s.segment === seg.segment)
-        .sort((a, b) => b.dropOffRate - a.dropOffRate || b.errorRate - a.errorRate)[0];
-      if (!worst) continue;
-      const ids = variationsForScreen(worst.screenId, stats.flowId, req.screenVersion);
-      if (!ids.length) continue;
-      out.push({
-        id: `l${out.length + 1}`,
-        segment: `${DIMENSION_LABELS[dim]}: ${seg.segment}`,
-        variationIds: ids,
-        rationale: `${seg.successes} de ${seg.agents} concluíram (${pct(seg.successRate)}), contra ${pct(stats.successRate)} no geral; a maior parada foi em "${title(worst.screenId)}". ${ids.map((id) => VARIATION_REASONS[id] ?? "").join(" ")} É hipótese: teste com pessoas desse perfil.`,
-      });
-    }
-  }
-  return out.slice(0, 4);
+  return { proposals: proposals.slice(0, 8), mode: "mock" };
 }
 
 export async function runDesigner(req: DesignerRequest): Promise<DesignerReport & { prompt: LlmPrompt; usage: LlmUsage | null }> {
@@ -247,21 +177,5 @@ export async function runDesigner(req: DesignerRequest): Promise<DesignerReport 
     return { ...mockDesigner(req), prompt, usage: null };
   }
   const { data, usage } = await callLLM({ prompt, schema: DesignerSchema, schemaName: "designer_report", effort: "medium" });
-  return { proposals: data.proposals.slice(0, 8), layouts: cleanLayouts(data.layouts, req.screenVersion), mode: "live", prompt, usage };
-}
-
-/**
- * Regras que o código garante na resposta do LLM (o prompt pede, mas o modelo às vezes esquece):
- * sem repetir a versão já testada, sem id duplicado, sem perfil vazio, no máximo 4 perfis.
- */
-export function cleanLayouts(
-  raw: { segment: string; variationIds: string[]; rationale: string }[],
-  screenVersion?: string,
-): LayoutRecommendation[] {
-  const tested = screenVersion ? `rec-${screenVersion.toLowerCase()}` : null;
-  return raw
-    .map((l) => ({ ...l, variationIds: [...new Set(l.variationIds)].filter((id) => id !== tested) }))
-    .filter((l) => l.variationIds.length)
-    .slice(0, 4)
-    .map((l, i) => ({ id: `l${i + 1}`, segment: l.segment, variationIds: l.variationIds, rationale: l.rationale }));
+  return { proposals: data.proposals.slice(0, 8), mode: "live", prompt, usage };
 }

@@ -5,6 +5,7 @@ import { BankApp } from "@/components/bank/BankApp";
 import { PhoneFrame } from "@/components/bank/PhoneFrame";
 import { TreeExportButton } from "@/components/bank/TreeExportButton";
 import { LabFab } from "@/components/lab/LabFab";
+import { LayoutPicker } from "@/components/lab/LayoutPicker";
 import { FLOWS } from "@/lib/bank/flows";
 import { bankReducer, initialBankState } from "@/lib/bank/state";
 
@@ -17,12 +18,20 @@ export default function HomePage() {
       <PhoneFrame>
         <BankApp ref={rootRef} state={state} dispatch={dispatch} />
       </PhoneFrame>
+      <div className="hidden w-[560px] rounded-xl bg-white p-3 shadow-sm sm:block">
+        <span className="mb-1 block text-sm font-semibold text-itau-navy">Layout do app</span>
+        <LayoutPicker
+          layout={state.layout}
+          compact
+          onChange={(layout) => dispatch({ actionId: "__reset", value: state.pixVersion ?? "", layout })}
+        />
+      </div>
       <div className="hidden items-center gap-3 sm:flex">
         <label className="flex items-center gap-2 text-sm text-itau-navy">
           Confirmação do Pix
           <select
             value={state.pixVersion ?? ""}
-            onChange={(e) => dispatch({ actionId: "__reset", value: e.target.value })}
+            onChange={(e) => dispatch({ actionId: "__reset", value: e.target.value, layout: state.layout })}
             className="rounded-md border border-neutral-300 bg-white px-2 py-1.5"
           >
             <option value="">original (sem repetir)</option>

@@ -1,7 +1,7 @@
 import type { SegmentScreenStat, ScreenStat, SegmentStat, SimulationStats } from "@/types/analytics";
 import type { SegmentDimension } from "@/types/persona";
 import type { AgentRun, SimulationRun } from "@/types/simulation";
-import { FLOWS, SCREEN_TITLES } from "../bank/flows";
+import { FLOWS, SCREEN_TITLES, flowFunnel } from "../bank/flows";
 import { PROFESSION_LABELS, literacyBand } from "../personas/config";
 
 export const DIMENSION_LABELS: Record<SegmentDimension, string> = {
@@ -64,7 +64,8 @@ const isErrorStep = (s: AgentRun["steps"][number]) => !s.optimal || s.errorShown
 
 function screenStats(run: SimulationRun): ScreenStat[] {
   const flow = FLOWS[run.config.flowId];
-  const ids = [...new Set([...flow.funnel, ...run.agents.flatMap((a) => a.steps.map((s) => s.screenId))])];
+  const funnel = flowFunnel(run.config.flowId, run.config.layout);
+  const ids = [...new Set([...funnel, ...run.agents.flatMap((a) => a.steps.map((s) => s.screenId))])];
   return ids.map((screenId) => {
     const reached = run.agents.filter(
       (a) => a.steps.some((s) => s.screenId === screenId) || (a.outcome === "success" && screenId === flow.successScreen),
@@ -88,7 +89,7 @@ function segmentScreenStats(run: SimulationRun, dims: SegmentDimension[]): Segme
   const out: SegmentScreenStat[] = [];
   for (const dim of dims) {
     for (const [segment, agents] of groupBy(run.agents, (a) => segmentOf(a, dim))) {
-      for (const screenId of FLOWS[run.config.flowId].funnel) {
+      for (const screenId of flowFunnel(run.config.flowId, run.config.layout)) {
         const steps = agents.flatMap((a) => a.steps.filter((s) => s.screenId === screenId));
         const reached = agents.filter((a) => a.steps.some((s) => s.screenId === screenId)).length;
         if (!steps.length) continue;

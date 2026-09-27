@@ -1,50 +1,76 @@
-import Image from "next/image";
-import { ExternalLink, LayoutTemplate } from "lucide-react";
-import type { DesignProposal, HumanDecision, LayoutRecommendation } from "@/types/analytics";
-import { VARIATIONS, VARIATION_GROUPS, lumeLink, type ScreenVariation, type VariationId } from "@/lib/design/variations";
+"use client";
+
+import { useMemo } from "react";
+import { LayoutTemplate } from "lucide-react";
+import type { DesignProposal, HumanDecision } from "@/types/analytics";
+import type { SimulationRun } from "@/types/simulation";
+import { FLOWS } from "@/lib/bank/flows";
+import { compareLayouts, layoutColumns, layoutSiblings, type ProfileRow } from "@/lib/analytics/layouts";
+import { LayoutPreview } from "../bank/LayoutPreview";
 import { SimulationBadge } from "../common/PrototypeNotice";
 import { HumanReview, type NewDecision } from "./HumanReview";
 
-/** Prévia de uma variação do Lume (print do frontend do Iury), com o que ela muda. */
-function Preview({ variation, compact }: { variation: ScreenVariation; compact?: boolean }) {
-  const link = lumeLink(variation);
-  return (
-    <figure className={compact ? "w-28 shrink-0" : "w-32 shrink-0"}>
-      <a href={variation.preview} target="_blank" rel="noreferrer" title="Abrir a prévia em tamanho real">
-        <Image
-          src={variation.preview}
-          alt={`Prévia: ${variation.name}`}
-          width={585}
-          height={1266}
-          className="h-auto w-full rounded-lg border border-neutral-200 shadow-sm"
-        />
-      </a>
-      <figcaption className="mt-1 text-[11px] leading-tight text-neutral-600">
-        <b className="block text-itau-navy">{variation.name}</b>
-        {!compact && variation.change}
-        {link && (
-          <a href={link} target="_blank" rel="noreferrer" className="mt-0.5 flex items-center gap-0.5 text-itau-orange">
-            <ExternalLink size={11} /> abrir no Lume
-          </a>
-        )}
-      </figcaption>
-    </figure>
-  );
+interface LayoutVariationsProps {
+  runs: SimulationRun[];
+  run: SimulationRun;
+  decisions: HumanDecision[];
+  onDecide: (decision: NewDecision) => void;
 }
 
-interface LayoutVariationsProps {
-  layouts?: LayoutRecommendation[];
-  runId: string;
-  decisions: HumanDecision[];
-  onDecide?: (decision: NewDecision) => void;
-}
+const pct = (s: number, n: number) => (n ? `${Math.round((s / n) * 100)}%` : "—");
 
 /**
- * Variações de tela por perfil de cliente: o Agente Designer escolhe, entre as telas já desenhadas
- * no Lume, as que podem ajudar quem teve mais dificuldade. Hipótese: quem decide é uma pessoa.
+ * Variações de tela por perfil de cliente: os agentes fizeram a mesma tarefa em cada layout do app
+ * (peças do Iury, no app laranja), e aqui aparece em qual layout cada perfil mais concluiu.
+ * É simulação: a indicação é hipótese para o teste com pessoas, e quem decide é o designer ou o PO.
  */
-export function LayoutVariations({ layouts, runId, decisions, onDecide }: LayoutVariationsProps) {
-  const known = (id: string): id is VariationId => id in VARIATIONS;
+export function LayoutVariations({ runs, run, decisions, onDecide }: LayoutVariationsProps) {
+  const columns = useMemo(() => layoutColumns(layoutSiblings(runs, run)), [runs, run]);
+  const rows = useMemo(() => compareLayouts(columns), [columns]);
+  const nameOf = (key: string) => columns.find((c) => c.key === key)?.name ?? key;
+  const mixedModes = new Set(columns.map((c) => `${c.run.llm.mode}|${c.run.llm.promptVersion}`)).size > 1;
+
+  const recommendation = (row: ProfileRow) => {
+    const column = columns.find((c) => c.key === row.best);
+    if (!column) return null;
+    const cell = row.cells.find((c) => c.key === row.best)!;
+    const others = row.cells
+      .filter((c) => c.key !== row.best)
+      .map((c) => `${c.successes} de ${c.agents}${c.avgSec !== null ? ` (${Math.round(c.avgSec)} s)` : ""} na ${nameOf(c.key)}`)
+      .join(", ");
+    const proposal: DesignProposal = {
+      id: `layout-${row.id}`,
+      screenId: "home",
+      problem: "",
+      change: `${row.segment}: ${column.name}`,
+      rationale: "",
+      impact: "média",
+      effort: "média",
+      relatedAnomalies: [],
+    };
+    return (
+      <article key={row.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+        <div className="flex flex-wrap gap-3">
+          {column.layout && <LayoutPreview layout={column.layout} width={120} />}
+          <div className="min-w-48 flex-1 space-y-1">
+            <div className="font-semibold text-itau-navy">Para: {row.segment}</div>
+            <div className="font-medium text-itau-orange">Melhor na simulação: {column.name}</div>
+            <p className="text-xs text-neutral-600">
+              {cell.successes} de {cell.agents} concluíram ({pct(cell.successes, cell.agents)}
+              {cell.avgSec !== null ? `, em ${Math.round(cell.avgSec)} s em média` : ""}), contra {others}. Hipótese para testar com pessoas desse
+              perfil.
+            </p>
+          </div>
+        </div>
+        <HumanReview
+          proposal={proposal}
+          runId={run.id}
+          onDecide={onDecide}
+          previous={decisions.findLast((d) => d.runId === run.id && d.proposalId === proposal.id && d.proposal === proposal.change)}
+        />
+      </article>
+    );
+  };
 
   return (
     <div className="mt-5 border-t border-neutral-200 pt-4">
@@ -54,70 +80,64 @@ export function LayoutVariations({ layouts, runId, decisions, onDecide }: Layout
         <SimulationBadge />
       </header>
       <p className="mb-3 text-xs text-neutral-500">
-        Prévias do app Lume (variações desenhadas pelo Iury). Para cada perfil que ficou bem abaixo da média, o agente escolhe as telas
-        que atacam onde esse perfil parou. É hipótese para o teste com pessoas desse perfil.
+        Os mesmos agentes fizeram &quot;{FLOWS[run.config.flowId].name}&quot; em cada layout do app (Dash V1, V2, V3 e combinações das peças do
+        Iury). A tabela mostra, por perfil, quantos concluíram e o tempo médio de quem concluiu (tempo humano simulado). É diferença clara
+        quando o layout teve 2 agentes a mais concluindo ou foi 15% mais rápido; o resto é sinal fraco.
       </p>
 
-      {layouts === undefined ? (
-        <p className="text-sm text-neutral-500">Este relatório foi gerado antes das variações. Clique em &quot;Gerar análise de novo&quot;.</p>
-      ) : !layouts.length ? (
-        <p className="text-sm text-neutral-500">Nenhum perfil ficou bem abaixo da média nesta simulação: sem variação para recomendar.</p>
+      {columns.length < 2 ? (
+        <p className="rounded-md bg-neutral-50 p-3 text-sm text-neutral-600">
+          Esta simulação rodou em um layout só. No Laboratório, use &quot;Testar nos layouts marcados&quot; para os mesmos agentes fazerem esta tarefa em
+          cada layout e comparar aqui.
+        </p>
       ) : (
-        <div className="space-y-3">
-          {layouts.map((l) => {
-            const variations = l.variationIds.filter(known).map((id) => VARIATIONS[id]);
-            const asProposal: DesignProposal = {
-              id: l.id,
-              screenId: variations[0]?.screen ?? "",
-              problem: l.rationale,
-              change: `${l.segment}: ${variations.map((v) => v.name).join(" + ")}`,
-              rationale: l.rationale,
-              impact: "média",
-              effort: "baixa",
-              relatedAnomalies: [],
-            };
-            return (
-              <article key={l.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
-                <div className="mb-2 font-semibold text-itau-navy">Para: {l.segment}</div>
-                <div className="flex flex-wrap gap-3">
-                  {variations.map((v) => (
-                    <Preview key={v.id} variation={v} />
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead>
+                <tr className="border-b align-bottom text-xs text-neutral-500">
+                  <th className="py-2 font-medium">Perfil</th>
+                  {columns.map((c) => (
+                    <th key={c.key} className="py-2 font-medium">
+                      {c.layout && <LayoutPreview layout={c.layout} width={96} />}
+                      <span className="mt-1 block text-itau-navy">{c.name}</span>
+                    </th>
                   ))}
-                  <p className="min-w-48 flex-1 text-xs text-neutral-600">{l.rationale}</p>
-                </div>
-                {onDecide && (
-                  <HumanReview
-                    proposal={asProposal}
-                    runId={runId}
-                    onDecide={onDecide}
-                    previous={decisions.findLast((d) => d.runId === runId && d.proposalId === l.id && d.proposal === asProposal.change)}
-                  />
-                )}
-              </article>
-            );
-          })}
-        </div>
+                  <th className="py-2 font-medium">Melhor para o perfil</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {rows.map((row) => (
+                  <tr key={row.id} className={`border-b border-neutral-100 ${row.id === "todos" ? "font-semibold" : ""}`}>
+                    <td className="py-1.5">{row.segment}</td>
+                    {row.cells.map((cell) => (
+                      <td key={cell.key} className={`py-1.5 ${cell.key === row.best && !row.weak ? "font-semibold text-itau-orange" : ""}`}>
+                        {cell.agents ? `${cell.successes} de ${cell.agents} (${pct(cell.successes, cell.agents)})` : "—"}
+                        {cell.avgSec !== null && <span className="block text-[11px] font-normal text-neutral-500">{Math.round(cell.avgSec)} s em média</span>}
+                      </td>
+                    ))}
+                    <td className="py-1.5 text-xs">
+                      {!row.best ? "ninguém concluiu" : row.weak ? `sinal fraco (${nameOf(row.best)})` : nameOf(row.best)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {mixedModes && (
+            <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+              As simulações usaram agentes diferentes (regras × LLM, ou outra versão do prompt): a diferença pode vir daí, não do layout.
+            </p>
+          )}
+          <div className="mt-4 space-y-3">
+            <div className="text-sm font-semibold text-itau-navy">Indicação por perfil (só onde a diferença é clara)</div>
+            {rows.filter((r) => r.best && !r.weak).map(recommendation)}
+            {!rows.some((r) => r.best && !r.weak) && (
+              <p className="text-sm text-neutral-500">Nenhum perfil teve diferença clara entre os layouts nesta simulação: todos os resultados são sinal fraco.</p>
+            )}
+          </div>
+        </>
       )}
-
-      <details className="mt-4">
-        <summary className="cursor-pointer text-sm font-semibold text-itau-navy">
-          Catálogo de variações do Lume ({Object.keys(VARIATIONS).length} prévias)
-        </summary>
-        <div className="mt-3 space-y-4">
-          {VARIATION_GROUPS.map((group) => (
-            <div key={group}>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{group}</div>
-              <div className="flex flex-wrap gap-3">
-                {Object.values(VARIATIONS)
-                  .filter((v) => v.group === group)
-                  .map((v) => (
-                    <Preview key={v.id} variation={v} compact />
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </details>
     </div>
   );
 }

@@ -14,15 +14,15 @@ import {
 import { SCROLL_DOWN, SCROLL_UP, applyScroll, extractAccessibilityTree } from "../a11y/extract";
 import { PROMPT_VERSIONS } from "../agents/versions";
 import { FLOWS, terminalOutcome } from "../bank/flows";
-import type { BankState } from "../bank/state";
+import type { BankState, ResetAction } from "../bank/state";
 import { countBy } from "../personas/sampling";
 import { hashSeed } from "../random";
 
 /** Uma instância renderizada do app (um "slot") onde um agente navega. */
 export interface AppSlot {
   getRoot(): HTMLElement | null;
-  /** Deve aplicar a ação e renderizar de forma síncrona (flushSync). "__reset" leva a versão da tela em value. */
-  dispatch(action: AgentAction | { actionId: "__reset"; value?: string }): void;
+  /** Deve aplicar a ação e renderizar de forma síncrona (flushSync). "__reset" leva a versão da tela e o layout. */
+  dispatch(action: AgentAction | ResetAction): void;
   /** Estado atual do app: só o avaliador usa (para saber se a tarefa foi cumprida); o agente só vê a árvore. */
   getState(): BankState;
 }
@@ -71,7 +71,7 @@ async function runAgent(
   let exitScreen: string = flow.startScreen;
   let errorMessage: string | undefined;
 
-  slot.dispatch({ actionId: "__reset", value: flow.versions ? config.version : undefined });
+  slot.dispatch({ actionId: "__reset", value: flow.versions ? config.version : undefined, layout: config.layout });
   await nextFrame();
   hooks.onAgentStart?.(slotIndex, agentIndex, persona);
 
@@ -101,6 +101,7 @@ async function runAgent(
         step,
         mockLatencyMs: config.mockLatencyMs,
         mode: config.llmMode,
+        layout: config.layout,
       });
     } catch (err) {
       errorMessage = (err as Error).message;

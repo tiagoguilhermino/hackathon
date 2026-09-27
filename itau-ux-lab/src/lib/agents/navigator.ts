@@ -115,6 +115,18 @@ Qual é a próxima ação de ${req.persona.name.split(" ")[0]}?`;
 
 const GARBLED_AMOUNTS = ["cinco mil", "R$ 3 mil", "dez mil reais"];
 
+/** Telas de escolha de caminho, em que o layout muda o que aparece (tela inicial e menus). */
+const MENU_SCREENS = ["home", "transfer", "deposit", "payments"];
+
+const plain = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** O rótulo tem alguma palavra que a pessoa procura para essa tarefa? (sem palavras definidas: tem) */
+export function hasScent(label: string, scent: string[] | undefined): boolean {
+  if (!scent?.length) return true;
+  const text = plain(label);
+  return scent.some((w) => text.includes(plain(w)));
+}
+
 interface Frustration {
   errors: number;
   suboptimal: number;
@@ -171,6 +183,10 @@ export function mockNavigatorPolicy(
   let pCorrect = 0.5 + 0.48 * d - 0.45 * L * (1 - d);
   if (optimal.actionId === SCROLL_DOWN) pCorrect *= 0.35 + 0.65 * d; // não percebe que precisa rolar
   if (target?.prominence === "low") pCorrect *= 0.45 + 0.55 * d; // não enxerga elemento apagado
+  // Cheiro de informação: nas telas de menu, se o botão certo não tem nenhuma palavra da tarefa
+  // (ex.: "Transferir" para quem quer fazer um Pix), quem tem pouca familiaridade digital acerta menos.
+  const forward = optimal.actionId !== "back" && optimal.actionId !== SCROLL_DOWN;
+  if (forward && MENU_SCREENS.includes(req.tree.screenId) && target && !hasScent(target.label, flow.scent)) pCorrect *= 0.45 + 0.55 * d;
   pCorrect = clamp(pCorrect, 0.05, 0.98);
 
   if (rng() < pAbandon) {
@@ -254,7 +270,7 @@ function decisionSchema(tree: AccessibilityTree) {
 export async function runNavigator(req: NavigatorRequest): Promise<NavigatorResponse> {
   const cognitiveLoad = analyzeCognitiveLoad(req.tree);
   const prompt = buildNavigatorPrompt(req, cognitiveLoad);
-  const optimal = optimalAction(req.flowId, req.tree, req.persona, createRng(hashSeed(req.seed, req.step, 0x51ed)));
+  const optimal = optimalAction(req.flowId, req.tree, req.persona, createRng(hashSeed(req.seed, req.step, 0x51ed)), req.layout);
   const mode = resolveLlmMode(req.mode);
 
   let decision: NavigatorDecision;
@@ -275,7 +291,7 @@ export async function runNavigator(req: NavigatorRequest): Promise<NavigatorResp
     decision: sanitizeDecision(decision, req.tree),
     cognitiveLoad,
     optimalActionId: optimal?.actionId ?? null,
-    acceptableActionIds: acceptableActionIds(req.flowId, req.tree, optimal),
+    acceptableActionIds: acceptableActionIds(req.flowId, req.tree, optimal, req.layout),
     prompt,
     mode,
     model,

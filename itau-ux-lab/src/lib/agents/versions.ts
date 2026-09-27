@@ -6,5 +6,5 @@
 export const PROMPT_VERSIONS = {
   navigator: "nav-v1",
   analyst: "ana-v1",
-  designer: "des-v2",
+  designer: "des-v3",
 } as const;

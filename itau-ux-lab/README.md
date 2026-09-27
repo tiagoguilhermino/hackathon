@@ -40,7 +40,16 @@ No topo do Laboratório há o seletor **Simulado** / **LLM real**.
 |---|---|---|
 | Solicitação de Empréstimo | contratar um empréstimo pessoal com valor e parcelas adequados | chegar a "Empréstimo contratado" |
 | Transferência via Pix | fazer um Pix pequeno para um familiar | chegar a "Pix enviado" |
-| **Agendar Pix que se repete todo mês** | "Agendar um Pix que se repete todo mês: R$ 250 do aluguel para Ana Paula Souza." | chegar a "Pix agendado todo mês" com a Ana, R$ 250 e o repetir ligado. Enviar uma vez só, para outra pessoa ou com outro valor conta como **concluiu errado**. |
+| T1 · Pix para contato | "Mande R$ 250 por Pix para Ana Paula Souza, celular (11) 98765-4321." | Pix de R$ 250 para a Ana |
+| **T2 · Pix que se repete todo mês** | "Deixe um Pix de R$ 250 para Ana Paula Souza, celular (11) 98765-4321, se repetindo todo mês." | chegar a "Pix agendado todo mês" com a Ana, R$ 250 e o repetir ligado |
+| T3 · Pix Copia e Cola | "Pague esta conta com o código Pix Copia e Cola que você recebeu." | pagar pelo Copia e Cola (só existe com o Pix abrindo no Copia e Cola) |
+| T4 · TED | "Transfira R$ 300 para Marcos Oliveira, agência 1234, conta 56789-0." | TED com esses dados |
+| T5 · Minha chave Pix | "Mostre sua chave Pix para alguém te pagar." | chegar a "Minhas chaves e QR Code" |
+| T6 · Boleto de depósito | "Gere um boleto para colocar R$ 100 na sua conta." | boleto de R$ 100 gerado |
+| T7 · Pagar boleto | "Pague o boleto da escola, de R$ 350,00, com o código que você recebeu." | pagar o boleto da escola |
+| T8 · Conta de luz | "Pague a conta de luz que vence amanhã." | pagar a conta de energia |
+
+T1 a T8 são as tarefas do Iury (`Frontend/itau-hackathon-bank-main/src/lib/cenarios.ts`), com a mesma frase para personas e pessoas. Terminar outra operação com dinheiro (outro Pix, outra conta, outro valor) conta como **concluiu errado**.
 
 As versões da confirmação do Pix são as mesmas das telas oficiais da vila (`vila-de-personas/telas/`):
 
@@ -61,25 +70,30 @@ Nos botões só com desenho, o agente lê a descrição do desenho ("ícone sem 
 
 As simulações, os relatórios dos agentes e as decisões ficam **só neste navegador** (localStorage). Guarde as decisões com o botão "Baixar registro (JSON)". O registro só cresce e, se estiver ilegível, o app não grava por cima.
 
-## Variações de tela do Lume no Agente Designer
+## Layouts do app (peças do Iury) e o melhor layout por perfil
 
-No Dashboard, embaixo das propostas do Agente Designer, fica a seção **"Variações de tela por perfil de cliente"**. Ela usa as telas que o Iury desenhou no frontend Lume (`Frontend/itau-hackathon-bank-main`, "Laboratório de cenários"):
+O app laranja em que os agentes navegam tem as peças do "Laboratório de cenários" do Iury. Tudo fica no mesmo visual:
 
-| Grupo | Variações (prévias em `public/previas/`) |
+| Peça | Opções |
 |---|---|
-| Tela inicial | Dash V1 (Pix com atalho próprio), Dash V2 (Boleto com atalho), Dash V3 (Transferir agrupado), Pagar boleto e Fatura separados |
-| Início do Pix | Fluxo 1 (contatos salvos), Fluxo 2 (Copia e Cola e chave) |
-| Repetir todo mês | A (dentro do ⋯), B (só ícone), C (com texto) |
+| Transferências | Pix e TED com atalhos próprios, ou os dois dentro de "Transferir" |
+| Boleto de depósito | dentro de "Depositar", ou com atalho "Boleto" |
+| Minhas chaves | dentro de "Depositar", ou dentro do Pix |
+| Pagar | um atalho "Pagar", ou "Pagar boleto" e "Fatura" separados |
+| Início do Pix | contatos salvos, ou Copia e Cola e chave digitada |
 
-Para cada perfil de cliente que ficou bem abaixo da média, o agente escolhe no catálogo as variações que atacam a tela onde esse perfil mais parou. Cada indicação mostra a prévia, os números do perfil e o porquê, e passa pela revisão humana, como as propostas.
+Presets: **Dash V1** (Pix, Pagar, TED/DOC, Depositar, Empréstimos na 2ª linha), **Dash V2** (Pix, Pagar, TED/DOC, Boleto, Empréstimos na 2ª linha) e **Dash V3** (Transferir, Pagar, Depositar, Empréstimos). A tela inicial mostra 4 atalhos por linha, como no celular. O modelo fica em `src/lib/design/variations.ts`.
 
-- **Simulado:** uma regra no código escolhe a variação pela tela onde o perfil parou (literacia e idade). Confirmação do Pix → Repetir C; início do Pix → Fluxo 1; tela inicial → Dash V1 no Pix e Dash V3 no empréstimo. A regra está em `variationsForScreen`, em `src/lib/design/variations.ts`.
-- **LLM real:** o agente recebe o catálogo e escolhe sozinho, só entre os ids do catálogo. O código tira a versão já testada e as repetições. Testado em 27/09: cerca de 7 s e 2.500 + 2.700 tokens por análise.
-- O catálogo inteiro fica em "Catálogo de variações do Lume (9 prévias)". Clicar numa prévia abre a imagem em tamanho real. Com `NEXT_PUBLIC_LUME_URL` no `.env.local` (ex.: `http://localhost:5174`), cada prévia ganha o link "abrir no Lume", com o app do Iury rodando.
+- **Na página do app (`/`):** escolha o layout embaixo do celular e experimente.
+- **No Laboratório:** escolha o layout em "Layout do app", ou marque V1, V2 e V3 em "Comparar layouts" e clique em **"Testar nos layouts marcados"**. Os mesmos agentes (mesma seed) fazem a mesma tarefa em cada layout.
+- **No Dashboard, dentro do Agente Designer,** a seção **"Variações de tela por perfil de cliente"** mostra:
+  - a tabela com a prévia ao vivo de cada layout;
+  - quantos concluíram e o tempo médio, no geral e por faixa de literacia digital e de idade;
+  - o melhor layout de cada perfil.
+- **É diferença clara** quando o melhor layout ganha de todos os outros por 2 agentes a mais concluindo, ou por ser 15% mais rápido (tempo só conta com 3 ou mais concluindo em cada). O resto é sinal fraco.
+- **Cada indicação clara passa pela revisão humana,** como as propostas.
 
-**Refazer as prévias** (depois de o Iury mudar as telas): suba o frontend Lume (`cd Frontend/itau-hackathon-bank-main && npm run dev -- --port 5174 --host 127.0.0.1`) e rode `python itau-ux-lab/scripts/capturar_previas.py`.
-- O script usa o modo limpo do app e não altera o código dele. Só na página que ele abre, troca os bancos reais da lista de contatos por fictícios e o nome da saudação por "Cliente", e pinta o ícone da versão B, que no app está branco sobre branco.
-- Se sobrar algum termo proibido na tela, ele para com erro.
+Use 24 agentes ou mais: com 12, cada faixa fica com poucos agentes e quase tudo é sinal fraco.
 
 ## Versões do prompt
 
@@ -90,7 +104,8 @@ A versão usada fica gravada em cada simulação e aparece no Dashboard. Mudou o
 | `nav-v1` | Prompt do Agente Navegador do Victor, com duas mudanças: o banco passa a ser o Lume (fictício) e há uma linha explicando os botões "ícone sem texto". |
 | `ana-v1` | Prompt do Agente Analista do Victor, mais: o que é "concluiu errado" e a instrução de escrever achados como hipóteses. |
 | `des-v1` | Prompt do Agente Designer do Victor, mais: cada proposta é uma hipótese e quem decide é o designer ou o PO. |
-| `des-v2` | `des-v1` mais as variações de tela do Lume por perfil (catálogo, desempenho por perfil e a versão testada); esforço de raciocínio "médio", porque no "alto" a resposta às vezes estourava o limite antes de fechar o JSON. |
+| `des-v2` | `des-v1` mais um catálogo de prints das telas do Iury (substituído pela `des-v3`). |
+| `des-v3` | Volta ao texto da `des-v1`, sem o catálogo. O melhor layout por perfil sai das simulações nos layouts, não do LLM. Esforço de raciocínio "médio", porque no "alto" a resposta às vezes estourava o limite antes de fechar o JSON. |
 
 ## Checagens
 
@@ -106,7 +121,11 @@ Rode as três antes de cada commit.
 
 - **Tudo é simulação.** Clientes, perfis e números são sintéticos. Serve para escolher o que levar ao teste com pessoas, não como evidência sobre clientes.
 - **Proporções da base.** A base sintética sorteia cada cliente com os pesos escolhidos: a proporção vale na média, mas numa base de 500 pode sair um pouco diferente (ex.: 2,5 servidores por CLT em vez de 2).
-- **Política Simulada.** No modo Simulado, as diferenças entre versões vêm das regras (botão apagado ou só com ícone é mais difícil para quem tem pouca familiaridade digital). Não diga que isso foi medido.
+- **Política Simulada.** No modo Simulado, as diferenças entre versões e layouts vêm das regras, e não foram medidas:
+  - botão apagado ou só com ícone é mais difícil para quem tem pouca familiaridade digital;
+  - na tela inicial e nos menus, o botão certo sem nenhuma palavra da tarefa (ex.: "Transferir" para quem quer fazer um Pix) também. É o "cheiro de informação": as palavras de cada tarefa ficam em `scent`, em `src/lib/bank/flows.ts`.
+
+  No modo LLM real, a IA lê a tela e decide sozinha, sem essas regras.
 
 ## Para o Victor
 

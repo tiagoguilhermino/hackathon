@@ -1,154 +1,112 @@
 /**
- * Catálogo de variações de tela do frontend Lume (Iury): as peças do "Laboratório de cenários"
- * de Frontend/itau-hackathon-bank-main/src/lib/cenarios.ts (Dash V1/V2/V3, a peça Pagar, o
- * Fluxo 1/2 do Pix e o Repetir A/B/C). O Agente Designer escolhe entre estas telas já desenhadas
- * as que podem ajudar cada perfil de cliente que teve mais dificuldade.
- *
- * As prévias ficam em public/previas e saem de scripts/capturar_previas.py. `lume` é o endereço
- * da mesma variação no frontend Lume (ex.: http://localhost:5174/?dash=v1&fluxo=f1&rec=c&limpo=sim).
+ * Variações de layout do app (as peças do "Laboratório de cenários" do Iury, em
+ * Frontend/itau-hackathon-bank-main/src/lib/cenarios.ts), no app laranja do laboratório.
+ * Os agentes navegam em cada layout, e o Dashboard compara qual funciona melhor para cada perfil.
  */
 
-export const VARIATION_IDS = [
-  "dash-v1",
-  "dash-v2",
-  "dash-v3",
-  "dash-pagar-separadas",
-  "pix-f1",
-  "pix-f2",
-  "rec-a",
-  "rec-b",
-  "rec-c",
-] as const;
-export type VariationId = (typeof VARIATION_IDS)[number];
+/** Pix e TED com atalhos próprios, ou os dois dentro de "Transferir". */
+export type Transfers = "separadas" | "unificadas";
+/** Boleto de depósito dentro de "Depositar", ou com atalho próprio. */
+export type BoletoPlace = "deposito" | "atalho";
+/** "Minhas chaves" (receber por Pix) dentro de "Depositar", ou dentro do Pix. */
+export type KeysPlace = "deposito" | "pix";
+/** Um atalho "Pagar" com tudo, ou "Pagar boleto" e "Fatura" separados. */
+export type PayMode = "unificadas" | "separadas";
+/** O Pix abre com os contatos salvos (Fluxo 1) ou com Copia e Cola e chave digitada (Fluxo 2). */
+export type PixStart = "contatos" | "copia_e_cola";
 
-export type VariationGroup = "Tela inicial" | "Início do Pix" | "Repetir todo mês";
-
-export interface ScreenVariation {
-  id: VariationId;
-  group: VariationGroup;
-  name: string;
-  /** O que muda nesta variação, em relação às outras do mesmo grupo */
-  change: string;
-  /** Tela do laboratório em que esta variação atua */
-  screen: "home" | "pix" | "pix-confirm";
-  preview: string;
-  lume: string;
+export interface AppLayout {
+  transfers: Transfers;
+  boleto: BoletoPlace;
+  keys: KeysPlace;
+  pay: PayMode;
+  pixStart: PixStart;
 }
 
-export const VARIATIONS: Record<VariationId, ScreenVariation> = {
-  "dash-v1": {
-    id: "dash-v1",
-    group: "Tela inicial",
-    name: "Dash V1 · Pix com atalho próprio",
-    change: "Atalhos Pix, Pagar, TED/DOC e Depositar na 1ª linha; Empréstimos na 2ª linha do celular. Boleto e Minhas chaves ficam em Depositar.",
-    screen: "home",
-    preview: "/previas/dash-v1.png",
-    lume: "dash=v1&fluxo=f1&rec=a",
-  },
-  "dash-v2": {
-    id: "dash-v2",
-    group: "Tela inicial",
-    name: "Dash V2 · Boleto com atalho",
-    change: "Atalhos Pix, Pagar, TED/DOC e Boleto; Minhas chaves dentro do Pix. Sem Depositar: a portabilidade de salário fica sem acesso.",
-    screen: "home",
-    preview: "/previas/dash-v2.png",
-    lume: "dash=v2&fluxo=f1&rec=a",
-  },
-  "dash-v3": {
-    id: "dash-v3",
-    group: "Tela inicial",
-    name: "Dash V3 · Transferir agrupado",
-    change: "Atalhos Transferir, Pagar, Depositar e Empréstimos, todos na 1ª linha. Pix e TED ficam dentro de Transferir (o Pix da barra de baixo continua direto).",
-    screen: "home",
-    preview: "/previas/dash-v3.png",
-    lume: "dash=v3&fluxo=f1&rec=a",
-  },
-  "dash-pagar-separadas": {
-    id: "dash-pagar-separadas",
-    group: "Tela inicial",
-    name: "Pagar boleto e Fatura separados",
-    change: "Na base da Dash V1, o atalho Pagar vira dois: Pagar boleto e Fatura. As contas a vencer ficam em Próximos pagamentos.",
-    screen: "home",
-    preview: "/previas/dash-pagar-separadas.png",
-    lume: "transf=separadas&boleto=deposito&chaves=deposito&pagar=separadas&fluxo=f1&rec=a",
-  },
-  "pix-f1": {
-    id: "pix-f1",
-    group: "Início do Pix",
-    name: "Pix · Fluxo 1 (contatos salvos)",
-    change: "O Pix abre com a lista de contatos: basta tocar no nome, sem digitar a chave. Não tem Copia e Cola.",
-    screen: "pix",
-    preview: "/previas/pix-f1.png",
-    lume: "dash=v1&fluxo=f1&rec=a",
-  },
-  "pix-f2": {
-    id: "pix-f2",
-    group: "Início do Pix",
-    name: "Pix · Fluxo 2 (Copia e Cola e chave)",
-    change: "O Pix abre com Copia e Cola e o campo da chave: é preciso digitar. Não tem lista de contatos.",
-    screen: "pix",
-    preview: "/previas/pix-f2.png",
-    lume: "dash=v1&fluxo=f2&rec=a",
-  },
-  "rec-a": {
-    id: "rec-a",
-    group: "Repetir todo mês",
-    name: "Repetir A · dentro do ⋯",
-    change: "\"Repetir todo mês\" fica escondido no botão ⋯ (Mais opções).",
-    screen: "pix-confirm",
-    preview: "/previas/rec-a.png",
-    lume: "dash=v1&fluxo=f1&rec=a",
-  },
-  "rec-b": {
-    id: "rec-b",
-    group: "Repetir todo mês",
-    name: "Repetir B · só ícone",
-    change: "Um ícone de repetir, sem texto, ao lado do destinatário.",
-    screen: "pix-confirm",
-    preview: "/previas/rec-b.png",
-    lume: "dash=v1&fluxo=f1&rec=b",
-  },
-  "rec-c": {
-    id: "rec-c",
-    group: "Repetir todo mês",
-    name: "Repetir C · com texto",
-    change: "Cartão \"Deseja automatizar?\" com o botão \"Repetir todo mês\", fora de menus.",
-    screen: "pix-confirm",
-    preview: "/previas/rec-c.png",
-    lume: "dash=v1&fluxo=f1&rec=c",
-  },
+export type PresetId = "v1" | "v2" | "v3";
+export const PRESET_IDS: PresetId[] = ["v1", "v2", "v3"];
+
+/** As Dash V1, V2 e V3 do Iury (com o Pix abrindo nos contatos). */
+export const LAYOUT_PRESETS: Record<PresetId, AppLayout> = {
+  v1: { transfers: "separadas", boleto: "deposito", keys: "deposito", pay: "unificadas", pixStart: "contatos" },
+  v2: { transfers: "separadas", boleto: "atalho", keys: "pix", pay: "unificadas", pixStart: "contatos" },
+  v3: { transfers: "unificadas", boleto: "deposito", keys: "pix", pay: "unificadas", pixStart: "contatos" },
 };
 
-export const VARIATION_GROUPS: VariationGroup[] = ["Tela inicial", "Início do Pix", "Repetir todo mês"];
+export const PRESET_NAMES: Record<PresetId, string> = { v1: "Dash V1", v2: "Dash V2", v3: "Dash V3" };
 
-/**
- * Regra do designer por regras (modo Simulado): que variação ataca a tela onde um perfil parou.
- * No modo LLM real, o Agente Designer escolhe sozinho no catálogo.
- */
-export function variationsForScreen(screenId: string, flowId: string, testedVersion?: string): VariationId[] {
-  switch (screenId) {
-    case "home":
-      // Empréstimo: na V3 o atalho Empréstimos fica na 1ª linha. Pix: na V1 o Pix tem atalho próprio.
-      return flowId === "emprestimo" ? ["dash-v3"] : ["dash-v1"];
-    case "pix":
-      return ["pix-f1"];
-    case "pix-confirm":
-      return testedVersion === "C" ? [] : ["rec-c"];
-    default:
-      return [];
-  }
+export const DEFAULT_LAYOUT: AppLayout = LAYOUT_PRESETS.v1;
+
+/** As peças e as opções de cada uma, com os nomes que aparecem no Laboratório. */
+export const LAYOUT_PIECES = [
+  { key: "transfers", label: "Transferências", options: [["separadas", "Pix e TED separados"], ["unificadas", "Dentro de Transferir"]] },
+  { key: "boleto", label: "Boleto de depósito", options: [["deposito", "Dentro de Depositar"], ["atalho", "Atalho próprio"]] },
+  { key: "keys", label: "Minhas chaves", options: [["deposito", "Dentro de Depositar"], ["pix", "Dentro do Pix"]] },
+  { key: "pay", label: "Pagar", options: [["unificadas", "Um atalho Pagar"], ["separadas", "Pagar boleto e Fatura"]] },
+  { key: "pixStart", label: "Início do Pix", options: [["contatos", "Contatos salvos"], ["copia_e_cola", "Copia e Cola e chave"]] },
+] as const satisfies readonly { key: keyof AppLayout; label: string; options: readonly (readonly [string, string])[] }[];
+
+export function sameLayout(a: AppLayout, b: AppLayout): boolean {
+  return a.transfers === b.transfers && a.boleto === b.boleto && a.keys === b.keys && a.pay === b.pay && a.pixStart === b.pixStart;
 }
 
-/** Por que a variação pode ajudar (texto do designer por regras). */
-export const VARIATION_REASONS: Partial<Record<VariationId, string>> = {
-  "dash-v1": "Na Dash V1 o Pix tem atalho próprio na tela inicial: um toque a menos, sem passar por Transferir.",
-  "dash-v3": "Na Dash V3 o atalho Empréstimos fica na 1ª linha do celular, sem rolar nem procurar.",
-  "pix-f1": "No Fluxo 1 a pessoa toca no nome do contato, sem digitar a chave.",
-  "rec-c": "Na versão C o repetir aparece com texto, sem abrir menu nem reconhecer um ícone.",
-};
+/** Preset com as mesmas peças de tela inicial (o início do Pix pode variar). */
+export function presetOf(layout: AppLayout): PresetId | null {
+  return PRESET_IDS.find((id) => sameLayout({ ...LAYOUT_PRESETS[id], pixStart: layout.pixStart }, layout)) ?? null;
+}
 
-/** Endereço da variação no frontend Lume, se NEXT_PUBLIC_LUME_URL estiver configurado. */
-export function lumeLink(variation: ScreenVariation): string | null {
-  const base = process.env.NEXT_PUBLIC_LUME_URL;
-  return base ? `${base.replace(/\/$/, "")}/?${variation.lume}&limpo=sim` : null;
+/** Nome curto: "Dash V3" (+ " · Pix por Copia e Cola"), ou as peças quando não é um preset. */
+export function layoutName(layout: AppLayout | undefined): string {
+  if (!layout) return "layout original";
+  const preset = presetOf(layout);
+  const pix = layout.pixStart === "copia_e_cola" ? " · Pix por Copia e Cola" : "";
+  if (preset) return PRESET_NAMES[preset] + pix;
+  return [
+    layout.transfers === "separadas" ? "Pix e TED separados" : "Transferir",
+    layout.boleto === "atalho" ? "boleto com atalho" : "boleto no Depositar",
+    layout.keys === "pix" ? "chaves no Pix" : "chaves no Depositar",
+    layout.pay === "separadas" ? "Pagar boleto e Fatura" : "um Pagar",
+  ].join(" + ") + pix;
+}
+
+/** Chave estável do layout (para agrupar simulações e decisões). */
+export function layoutKey(layout: AppLayout | undefined): string {
+  return layout ? `${layout.transfers}.${layout.boleto}.${layout.keys}.${layout.pay}.${layout.pixStart}` : "original";
+}
+
+export function hasDepositMenu(layout: AppLayout): boolean {
+  return layout.boleto === "deposito" || layout.keys === "deposito";
+}
+
+export interface Shortcut {
+  actionId: string;
+  label: string;
+}
+
+/** No celular a grade tem 4 atalhos por linha; do 5º em diante, eles vão para a 2ª linha. */
+export const SHORTCUTS_PER_ROW = 4;
+
+/** Atalhos da tela inicial, na ordem das Dash do Iury (a mesma regra de atalhosDaDashboard). */
+export function homeShortcuts(layout: AppLayout): Shortcut[] {
+  const pay: Shortcut[] =
+    layout.pay === "separadas"
+      ? [
+          { actionId: "home-pay-bill", label: "Pagar boleto" },
+          { actionId: "home-invoice", label: "Fatura" },
+        ]
+      : [{ actionId: "home-pay", label: "Pagar" }];
+  const shortcuts: Shortcut[] =
+    layout.transfers === "separadas"
+      ? [{ actionId: "home-pix", label: "Pix" }, ...pay, { actionId: "home-ted", label: "TED/DOC" }]
+      : [{ actionId: "home-transfer", label: "Transferir" }, ...pay];
+  if (hasDepositMenu(layout)) shortcuts.push({ actionId: "home-deposit", label: "Depositar" });
+  if (layout.boleto === "atalho") shortcuts.push({ actionId: "home-boleto", label: "Boleto" });
+  shortcuts.push({ actionId: "home-loan", label: "Empréstimos" });
+  return shortcuts;
+}
+
+/** Em que linha de atalhos do celular fica um atalho (1 ou 2), ou null se não existir. */
+export function shortcutRow(actionId: string, layout: AppLayout): number | null {
+  const i = homeShortcuts(layout).findIndex((s) => s.actionId === actionId);
+  return i < 0 ? null : Math.floor(i / SHORTCUTS_PER_ROW) + 1;
 }

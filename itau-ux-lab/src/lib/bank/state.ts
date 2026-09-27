@@ -1,4 +1,5 @@
 import type { AgentAction, ScreenId, ScreenVersion } from "@/types/simulation";
+import { DEFAULT_LAYOUT, type AppLayout } from "../design/variations";
 
 /**
  * Estado do ambiente (s ∈ S). A UI é uma função pura deste estado, e toda
@@ -24,9 +25,27 @@ export interface BankState {
     recurring: boolean;
     /** Menu "Mais opções" aberto (versão A) */
     moreOpen: boolean;
+    /** Código Pix Copia e Cola colado */
+    pasted: boolean;
+    /** Como o Pix segue para a confirmação: pela chave digitada ou pelo Copia e Cola */
+    mode: "chave" | "copia";
   };
   /** Versão da confirmação do Pix (A/B/C da vila); null = tela original, sem opção de repetir */
   pixVersion: ScreenVersion | null;
+  /** Layout do app (peças do Iury): onde ficam Pix, TED, boleto, chaves e Pagar */
+  layout: AppLayout;
+  ted: { name: string; agency: string; account: string; amount: string };
+  deposit: { amount: string };
+  /** Conta escolhida para pagar (boleto colado, conta a vencer ou fatura) */
+  bill: BillId | null;
+  billPasted: boolean;
+}
+
+/** "__reset" leva a versão da confirmação do Pix (value) e o layout do app. */
+export interface ResetAction {
+  actionId: "__reset";
+  value?: string;
+  layout?: AppLayout;
 }
 
 export const ACCOUNT = {
@@ -42,6 +61,18 @@ export const PIX_CONTACTS = [
   { id: "ana", name: "Ana Paula Souza", key: "(11) 98765-4321", detail: "Celular · Banco Lume" },
   { id: "marcos", name: "Marcos Lima", key: "marcos.lima@exemplo.com", detail: "E-mail · Banco Aurora" },
 ] as const;
+
+/** Cobrança fictícia que o botão "Colar código" do Pix Copia e Cola cola. */
+export const COPY_PASTE_CHARGE = { payee: "Loja Exemplo (fictícia)", amount: 89.9 };
+
+/** Contas fictícias: o boleto da escola (colado), as contas a vencer e a fatura do cartão. */
+export const BILLS = {
+  escola: { name: "Escola Aprender (fictícia)", amount: 350, due: "vence em 5 dias" },
+  energia: { name: "Energia · Luz Brasil (fictícia)", amount: 184.7, due: "vence amanhã" },
+  celular: { name: "Celular · Fala Mais (fictícia)", amount: 69.9, due: "vence 02 out" },
+  fatura: { name: "Fatura do cartão final 4821", amount: 1893.42, due: "fecha em 8 dias" },
+} as const;
+export type BillId = keyof typeof BILLS;
 
 const normalizeKey = (key: string) => (/\d/.test(key) && !key.includes("@") ? key.replace(/\D/g, "") : key.trim().toLowerCase());
 
@@ -69,8 +100,13 @@ export const initialBankState: BankState = {
     termsAccepted: false,
     detailsOpen: false,
   },
-  pix: { key: "", amount: "", recurring: false, moreOpen: false },
+  pix: { key: "", amount: "", recurring: false, moreOpen: false, pasted: false, mode: "chave" },
   pixVersion: null,
+  layout: DEFAULT_LAYOUT,
+  ted: { name: "", agency: "", account: "", amount: "" },
+  deposit: { amount: "" },
+  bill: null,
+  billPasted: false,
 };
 
 export function parseCurrency(value: string): number {
@@ -99,16 +135,27 @@ function back(state: BankState): BankState {
 }
 
 const VERSIONS: ScreenVersion[] = ["A", "B", "C"];
-/** Volta ao início mantendo o que não é da tarefa (saldo visível e versão da tela). */
-const restart = (state: BankState): BankState => ({ ...initialBankState, balanceVisible: state.balanceVisible, pixVersion: state.pixVersion });
+/** Volta ao início mantendo o que não é da tarefa (saldo visível, versão da tela e layout). */
+const restart = (state: BankState): BankState => ({
+  ...initialBankState,
+  balanceVisible: state.balanceVisible,
+  pixVersion: state.pixVersion,
+  layout: state.layout,
+});
 
-export function bankReducer(state: BankState, action: AgentAction | { actionId: "__reset"; value?: string }): BankState {
+const pickBill = (state: BankState, bill: BillId): BankState => navigate({ ...state, bill }, "pay-bill-confirm");
+
+export function bankReducer(state: BankState, action: AgentAction | ResetAction): BankState {
   const value = "value" in action ? action.value ?? "" : "";
 
   switch (action.actionId) {
     case "__reset":
       // value = versão da tela do Pix (A/B/C) que o Laboratório está testando
-      return { ...initialBankState, pixVersion: VERSIONS.includes(value as ScreenVersion) ? (value as ScreenVersion) : null };
+      return {
+        ...initialBankState,
+        pixVersion: VERSIONS.includes(value as ScreenVersion) ? (value as ScreenVersion) : null,
+        layout: ("layout" in action && action.layout) || DEFAULT_LAYOUT,
+      };
 
     // Navegação global
     case "back":
@@ -182,14 +229,90 @@ export function bankReducer(state: BankState, action: AgentAction | { actionId: 
       return { ...state, error: null, pix: { ...state.pix, key: value } };
     case "pix-amount":
       return { ...state, error: null, pix: { ...state.pix, amount: value } };
+    // Transferir (layout com Pix e TED dentro de Transferir)
+    case "home-transfer":
+      return navigate(state, "transfer");
+    case "transfer-pix":
+      return navigate(state, "pix");
+    case "transfer-ted":
+    case "home-ted":
+      return navigate(state, "ted");
+
+    // TED
+    case "ted-name":
+    case "ted-agency":
+    case "ted-account":
+    case "ted-amount":
+      return { ...state, error: null, ted: { ...state.ted, [action.actionId.slice(4)]: value } };
+    case "ted-continue": {
+      const { name, agency, account, amount } = state.ted;
+      if (!name.trim() || !agency.trim() || !account.trim()) return { ...state, error: "Preencha nome, agência e conta do favorecido." };
+      const v = parseCurrency(amount);
+      if (!Number.isFinite(v) || v <= 0) return { ...state, error: "Informe o valor da transferência." };
+      if (v > ACCOUNT.balance) return { ...state, error: "Saldo insuficiente." };
+      return navigate(state, "ted-confirm");
+    }
+    case "ted-send":
+      return navigate(state, "ted-success");
+
+    // Depositar: boleto de depósito, minhas chaves e portabilidade
+    case "home-deposit":
+      return navigate(state, "deposit");
+    case "deposit-boleto":
+    case "home-boleto":
+      return navigate(state, "boleto-deposit");
+    case "deposit-keys":
+    case "pix-my-keys":
+      return navigate(state, "my-keys");
+    case "deposit-portability":
+      return navigate(state, "portability");
+    case "boleto-amount":
+      return { ...state, error: null, deposit: { amount: value } };
+    case "boleto-generate": {
+      const v = parseCurrency(state.deposit.amount);
+      if (!Number.isFinite(v) || v <= 0) return { ...state, error: "Informe o valor do depósito." };
+      return navigate(state, "boleto-generated");
+    }
+
+    // Pagar: boleto (colar código), contas a vencer e fatura
+    case "home-pay-bill":
+    case "pay-bill-option":
+      return navigate(state, "pay-bill");
+    case "home-invoice":
+    case "pay-invoice-option":
+      return navigate(state, "invoice");
+    case "pay-bill-paste":
+      return { ...state, error: null, bill: "escola", billPasted: true };
+    case "pay-bill-continue":
+      if (!state.billPasted) return { ...state, error: "Cole o código do boleto para continuar." };
+      return navigate(state, "pay-bill-confirm");
+    case "home-upcoming-energy":
+    case "pay-upcoming-energy":
+      return pickBill(state, "energia");
+    case "home-upcoming-phone":
+    case "pay-upcoming-phone":
+      return pickBill(state, "celular");
+    case "pay-bill-pay":
+      return navigate(state, "pay-success");
+    case "invoice-pay":
+      return navigate({ ...state, bill: "fatura" }, "pay-success");
+
+    // Pix Copia e Cola (layout com o Pix abrindo no Copia e Cola)
+    case "pix-paste":
+      return { ...state, error: null, pix: { ...state.pix, pasted: true } };
+    case "pix-cc-continue":
+      if (!state.pix.pasted) return { ...state, error: "Cole o código Pix Copia e Cola para continuar." };
+      return navigate({ ...state, pix: { ...state.pix, mode: "copia" } }, "pix-confirm");
+
     case "pix-continue": {
       const amount = parseCurrency(state.pix.amount);
       if (state.pix.key.trim().length < 5) return { ...state, error: "Informe uma chave Pix válida." };
       if (!Number.isFinite(amount) || amount <= 0) return { ...state, error: "Informe o valor da transferência." };
       if (amount > ACCOUNT.balance) return { ...state, error: "Saldo insuficiente." };
-      return navigate(state, "pix-confirm");
+      return navigate({ ...state, pix: { ...state.pix, mode: "chave" } }, "pix-confirm");
     }
     case "pix-confirm":
+      if (state.pix.mode === "copia") return navigate(state, "pix-success");
       return navigate(state, state.pix.recurring ? "pix-scheduled" : "pix-success");
 
     // PIX que se repete todo mês (versões A/B/C da vila)

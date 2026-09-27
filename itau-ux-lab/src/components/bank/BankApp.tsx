@@ -6,8 +6,11 @@ import type { AgentAction } from "@/types/simulation";
 import { BankContext } from "./BankContext";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LoanStep1, LoanStep2, LoanStep3, LoanSuccess } from "./screens/LoanScreens";
+import { BoletoDepositScreen, BoletoGenerated, DepositScreen, MyKeysScreen } from "./screens/DepositScreens";
+import { InvoiceScreen, PayBillConfirm, PayBillScreen, PaySuccess, PaymentsScreen } from "./screens/PayScreens";
 import { PixConfirm, PixScheduled, PixScreen, PixSuccess } from "./screens/PixScreens";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { TedConfirm, TedScreen, TedSuccess, TransferScreen } from "./screens/TransferScreens";
 
 interface BankAppProps {
   state: BankState;
@@ -35,6 +38,32 @@ function CurrentScreen({ screen }: { screen: BankState["screen"] }) {
       return <PixSuccess />;
     case "pix-scheduled":
       return <PixScheduled />;
+    case "transfer":
+      return <TransferScreen />;
+    case "ted":
+      return <TedScreen />;
+    case "ted-confirm":
+      return <TedConfirm />;
+    case "ted-success":
+      return <TedSuccess />;
+    case "deposit":
+      return <DepositScreen />;
+    case "boleto-deposit":
+      return <BoletoDepositScreen />;
+    case "boleto-generated":
+      return <BoletoGenerated />;
+    case "my-keys":
+      return <MyKeysScreen />;
+    case "payments":
+      return <PaymentsScreen />;
+    case "pay-bill":
+      return <PayBillScreen />;
+    case "pay-bill-confirm":
+      return <PayBillConfirm />;
+    case "pay-success":
+      return <PaySuccess />;
+    case "invoice":
+      return <InvoiceScreen />;
     default:
       return <PlaceholderScreen screenId={screen} />;
   }

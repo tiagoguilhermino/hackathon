@@ -1,9 +1,9 @@
+import type { ReactNode } from "react";
 import { AlertOctagon, AlertTriangle, Info, Lightbulb, Loader2, Microscope, Palette } from "lucide-react";
 import type { AnalystReport, DesignerReport, HumanDecision, Severity } from "@/types/analytics";
 import { SCREEN_TITLES } from "@/lib/bank/flows";
 import { SimulationBadge } from "../common/PrototypeNotice";
 import { HumanReview, type NewDecision } from "./HumanReview";
-import { LayoutVariations } from "./LayoutVariations";
 
 const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string; label: string }> = {
   alta: { icon: AlertOctagon, className: "bg-red-50 text-red-700 border-red-200", label: "Severidade alta" },
@@ -78,9 +78,11 @@ interface DesignerPanelProps {
   runId?: string;
   decisions?: HumanDecision[];
   onDecide?: (decision: NewDecision) => void;
+  /** Conteúdo extra no fim do painel (a comparação de layouts por perfil) */
+  footer?: ReactNode;
 }
 
-export function DesignerPanel({ report, error, waiting, runId, decisions = [], onDecide }: DesignerPanelProps) {
+export function DesignerPanel({ report, error, waiting, runId, decisions = [], onDecide, footer }: DesignerPanelProps) {
   return (
     <section className="rounded-xl bg-white p-5 shadow-sm">
       <header className="mb-3 flex items-center gap-2">
@@ -127,7 +129,7 @@ export function DesignerPanel({ report, error, waiting, runId, decisions = [], o
           {!report.proposals.length && <p className="text-sm text-neutral-500">Nenhuma mudança necessária.</p>}
         </div>
       )}
-      {report && runId && <LayoutVariations layouts={report.layouts} runId={runId} decisions={decisions} onDecide={onDecide} />}
+      {footer}
     </section>
   );
 }

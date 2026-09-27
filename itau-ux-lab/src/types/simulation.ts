@@ -1,3 +1,4 @@
+import type { AppLayout } from "@/lib/design/variations";
 import type { AccessibilityTree, CognitiveLoadReport } from "./a11y";
 import type { AgeBand, Persona, PersonaGenerationConfig, Profession } from "./persona";
 
@@ -11,11 +12,35 @@ export type ScreenId =
   | "pix-confirm"
   | "pix-success"
   | "pix-scheduled"
+  | "transfer"
+  | "ted"
+  | "ted-confirm"
+  | "ted-success"
+  | "deposit"
+  | "boleto-deposit"
+  | "boleto-generated"
+  | "my-keys"
+  | "portability"
   | "payments"
+  | "pay-bill"
+  | "pay-bill-confirm"
+  | "pay-success"
+  | "invoice"
   | "cards"
   | "investments";
 
-export type FlowId = "emprestimo" | "pix" | "pix_recorrente";
+/** Fluxos do Victor (emprestimo, pix) e as tarefas T1 a T8 do Iury (Frontend/.../cenarios.ts). */
+export type FlowId =
+  | "emprestimo"
+  | "pix"
+  | "pix_contato"
+  | "pix_recorrente"
+  | "copia_e_cola"
+  | "ted"
+  | "minhas_chaves"
+  | "boleto_deposito"
+  | "pagar_boleto"
+  | "conta_luz";
 
 /** Versão da tela testada (A/B/C da vila de personas). */
 export type ScreenVersion = "A" | "B" | "C";
@@ -38,6 +63,11 @@ export interface FlowDefinition {
   /** Etapas ordenadas usadas no funil de conversão */
   funnel: ScreenId[];
   maxSteps: number;
+  /**
+   * Palavras que a pessoa procura na tela para essa tarefa ("cheiro de informação"). Só a política
+   * por regras (modo Simulado) usa: é uma hipótese de modelagem, não um dado.
+   */
+  scent?: string[];
   /** Versões da tela comparadas antes × depois (só nos fluxos da vila) */
   versions?: FlowVersion[];
 }
@@ -70,6 +100,8 @@ export interface NavigatorRequest {
   mockLatencyMs?: number;
   /** Escolha do Laboratório: LLM real (Groq) ou política simulada */
   mode?: "mock" | "live";
+  /** Layout do app: só o oráculo (caminho de referência) usa; o prompt do agente não recebe */
+  layout?: AppLayout;
 }
 
 export interface NavigatorResponse {
@@ -132,6 +164,10 @@ export interface SimulationConfig {
   llmMode: "mock" | "live";
   /** Versão da tela testada, quando o fluxo tem versões */
   version?: ScreenVersion;
+  /** Layout do app (peças do Iury); ausente nas simulações antigas */
+  layout?: AppLayout;
+  /** Simulações rodadas juntas pelo "Testar nos layouts marcados" (mesmos agentes, layouts diferentes) */
+  batchId?: string;
   /** Agentes executados em paralelo (cada um em sua própria instância do app) */
   concurrency: number;
 }

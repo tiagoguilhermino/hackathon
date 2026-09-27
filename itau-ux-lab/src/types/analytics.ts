@@ -86,20 +86,8 @@ export interface DesignProposal {
   relatedAnomalies: string[];
 }
 
-/** Variações de tela do Lume (Iury) escolhidas para um perfil de cliente que teve mais dificuldade. */
-export interface LayoutRecommendation {
-  id: string;
-  /** Perfil no formato "Dimensão: valor" (ex.: "Literacia digital: baixa") */
-  segment: string;
-  /** Ids do catálogo src/lib/design/variations.ts */
-  variationIds: string[];
-  rationale: string;
-}
-
 export interface DesignerReport {
   proposals: DesignProposal[];
-  /** Ausente em relatórios gerados antes do catálogo de variações */
-  layouts?: LayoutRecommendation[];
   mode: "mock" | "live";
 }
 

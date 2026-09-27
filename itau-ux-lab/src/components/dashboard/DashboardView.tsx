@@ -8,13 +8,14 @@ import type { SegmentDimension } from "@/types/persona";
 import type { SimulationRun } from "@/types/simulation";
 import { buildEvidence } from "@/lib/analytics/evidence";
 import { DIMENSION_LABELS, computeStats } from "@/lib/analytics/stats";
-import { FLOWS } from "@/lib/bank/flows";
+import { FLOWS, flowFunnel } from "@/lib/bank/flows";
 import { runLabel, versionLabel } from "@/lib/simulation/label";
 import { appendDecision, loadDecisions, loadReports, loadRuns, saveReports } from "@/lib/simulation/storage";
 import { nowBrasilia } from "@/lib/time";
 import { SimulationBadge } from "../common/PrototypeNotice";
 import { AnalystPanel, DesignerPanel } from "./AgentPanels";
 import { DecisionRegister } from "./DecisionRegister";
+import { LayoutVariations } from "./LayoutVariations";
 import type { NewDecision } from "./HumanReview";
 import { VersionComparison } from "./VersionComparison";
 import { ErrorHeatmap } from "./ErrorHeatmap";
@@ -89,7 +90,6 @@ export function DashboardView() {
           stats,
           screens: run.screens,
           mode: run.config.llmMode,
-          screenVersion: run.config.version,
         });
         if (!cancelled) {
           setReports({ runId: run.id, analyst, designer });
@@ -219,10 +219,10 @@ export function DashboardView() {
             <CompletionTimeChart data={segments} />
           </Panel>
           <Panel title="Funil e pontos de abandono (drop-off)">
-            <FunnelChart screens={stats.byScreen} funnel={flow.funnel} />
+            <FunnelChart screens={stats.byScreen} funnel={flowFunnel(run.config.flowId, run.config.layout)} />
           </Panel>
           <Panel title={`Taxa de erro por etapa × ${DIMENSION_LABELS[dimension].toLowerCase()}`}>
-            <ErrorHeatmap data={stats.segmentScreen} dimension={dimension} segments={segments.map((s) => s.segment)} funnel={flow.funnel} />
+            <ErrorHeatmap data={stats.segmentScreen} dimension={dimension} segments={segments.map((s) => s.segment)} funnel={flowFunnel(run.config.flowId, run.config.layout)} />
             <p className="mt-2 text-xs text-neutral-500">
               Erro = ação sub-ótima em relação ao caminho ideal ou que disparou alerta na tela. Passe o mouse para ver n e drop-off.
             </p>
@@ -237,6 +237,7 @@ export function DashboardView() {
           runId={run.id}
           decisions={decisions}
           onDecide={decide}
+          footer={<LayoutVariations runs={runs} run={run} decisions={decisions} onDecide={decide} />}
         />
         {saveError && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{saveError}</p>}
         <DecisionRegister decisions={decisions} />
