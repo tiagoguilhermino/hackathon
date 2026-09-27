@@ -14,6 +14,14 @@
 | M3 | Rascunho da Ficha do Produto: press release com 144 palavras (o Guia pede 100 a 150), 5 perguntas e respostas e 10 fontes do consolidado. Cabe em 2 páginas. Faltam só os números do teste com pessoas | `vila-de-personas/docs/ficha-do-produto.md` |
 | M4 | Protocolo do teste com pessoas (1 página), com a mesma regra de "concluiu" da vila, e o cabeçalho exato da planilha | `vila-de-personas/docs/protocolo-teste-pessoas.md` |
 
+### Novo (26/09, ~23h): laboratório multiagentes em Next.js
+
+A especificação "sistema multiagentes para testes de usabilidade" foi implementada em `vila-lab/`, com os 4 módulos testados no navegador:
+- `/lab`: base sintética com proporção configurável e agentes navegando no app do banco fictício, com `data-action-id` e árvore de acessibilidade;
+- `/dashboard`: gráficos por segmento, agente analista, agente designer e revisão humana registrada.
+
+A IA está **simulada** por padrão; a Groq está pronta, mas não foi testada aqui. Como rodar e como adaptar ao frontend novo: `vila-lab/README.md`. A avaliação completa (case, dicas dos mentores e qual motor usar no vídeo) está em [AVALIACAO-E-PLANO-FINAL.md](AVALIACAO-E-PLANO-FINAL.md). **Antes de gravar, decidam o motor do vídeo (seção 5 da avaliação).**
+
 ## 2. O que só vocês podem fazer (em ordem)
 
 | # | Quem | Tarefa | Tempo | Pronto quando |
