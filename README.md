@@ -1,5 +1,9 @@
 # Hackathon Itaú: pipeline de agentes
 
+> **Avaliação da solução (case e dicas dos mentores) e plano final:** [AVALIACAO-E-PLANO-FINAL.md](AVALIACAO-E-PLANO-FINAL.md).
+>
+> **O que falta fazer e como gravar o vídeo:** [PLANO-GRAVACAO-E-PENDENCIAS.md](PLANO-GRAVACAO-E-PENDENCIAS.md).
+>
 > **Onde estamos e o que falta:** [STATUS-E-PASSO-A-PASSO.md](STATUS-E-PASSO-A-PASSO.md) (avaliação das entregas e passo a passo das tarefas restantes, para quem não programa).
 
 Pasta montada seguindo o guia *Como montar seus agentes — passo a passo* (o PDF aqui na raiz). Ela funciona igual no **Claude Code** e no **Antigravity**: mesma constituição, mesmos três agentes (pesquisador, consolidador, revisor), mesmas pastas de dados.

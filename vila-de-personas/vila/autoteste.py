@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import io
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -138,6 +139,18 @@ def main() -> int:
         total = sum(1 for _ in linhas)
         checar("sem conferir" not in texto and "22 min somando as 2 sessões" in texto,
                f"resumo conta as {total} linhas conferidas e o tempo das sessões")
+        with arquivo.open("w", encoding="utf-8-sig", newline="") as f:
+            escritor = csv.DictWriter(f, fieldnames=COLUNAS_PAREAMENTO, delimiter=";")
+            escritor.writeheader()
+            escritor.writerows(
+                {**l, "conferido": "ok", "classificacao_final": "repetida" if i == 0 else l["classificacao_final"]}
+                for i, l in enumerate(linhas_csv)
+            )
+        texto = resumo(sim, notas, arquivo)
+        contados = sum(int(re.search(rf"{rotulo} \([^)]*\): (\d+)", texto).group(1))
+                       for rotulo in ("Acertos", "Pontos cegos", "Alarmes falsos"))
+        checar("1 linha(s) marcadas como repetidas" in texto and contados == total - 1,
+               "linha marcada como repetida fica fora da conta")
 
     checar(motor.mensagem_de_erro(motor.ErroVila("x")) == "x", "erros viram mensagem clara")
     print("\nTudo certo (modo offline: não diz nada sobre a qualidade das respostas da IA).")

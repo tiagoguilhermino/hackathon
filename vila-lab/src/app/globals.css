@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/*
+ * Paleta do protótipo. As cores da marca ficam só aqui: para trocar a identidade visual
+ * (por exemplo, para um banco fictício neutro), mude estes seis valores.
+ */
+@theme {
+  --color-marca: #ec7000; /* laranja */
+  --color-marca-escura: #c45d00;
+  --color-marca-clara: #fff1e5;
+  --color-azul: #1e2a4f; /* azul-escuro */
+  --color-azul-claro: #e8ebf3;
+  --color-fundo: #f2f3f5;
+  --color-cartao: #ffffff;
+  --color-borda: #dde1e8;
+  --color-texto: #1b2233;
+  --color-texto-suave: #4d5566;
+  --color-texto-apagado: #b9bfca; /* usado de propósito no botão de baixo contraste */
+  --color-sucesso: #147a4a;
+  --color-alerta: #9a5b00;
+  --color-erro: #b3261e;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+}
+
+/* Destaque do elemento que o agente vai tocar durante a simulação. */
+[data-destaque="true"] {
+  outline: 3px solid var(--color-marca);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-marca) 25%, transparent);
+  transition: outline-color 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

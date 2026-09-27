@@ -7,7 +7,7 @@ está lá. Se o arquivo estiver ilegível, o painel avisa e não grava por cima.
 import json
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -58,5 +58,10 @@ def acrescentar(novas: list[Decisao], caminho: Path = ARQ_DECISOES) -> int:
     return len(registros)
 
 
+# Horário de Brasília fixo (sem horário de verão desde 2019): o Streamlit Cloud roda em UTC, e o
+# histórico na tela e no vídeo precisa mostrar a hora do evento.
+BRASILIA = timezone(timedelta(hours=-3), "BRT")
+
+
 def agora() -> datetime:
-    return datetime.now().astimezone()
+    return datetime.now(BRASILIA)
