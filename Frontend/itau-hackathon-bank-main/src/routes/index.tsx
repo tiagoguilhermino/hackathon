@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  AlertCircle,
   ArrowDownLeft,
   ArrowLeft,
   ArrowRight,
@@ -74,6 +75,7 @@ const navItems = [
   { label: "Benefícios", icon: Gift },
 ];
 
+// CONTATOS SALVOS PARA O FLUXO PIX
 const mockContacts = [
   { name: "Ana Paula Souza", key: "(11) 98765-4321", bank: "Banco Lume" },
   { name: "Marcos Oliveira", key: "(11) 97654-3210", bank: "Itaú Unibanco" },
@@ -81,6 +83,14 @@ const mockContacts = [
   { name: "Carlos Eduardo", key: "(31) 98123-4567", bank: "Bradesco" },
   { name: "Fernanda Costa", key: "(41) 99112-2334", bank: "Banco do Brasil" },
   { name: "Roberto Santos", key: "(81) 98877-6655", bank: "Santander" },
+];
+
+// CONTATOS E FAVORECIDOS SALVOS PARA O FLUXO TED/DOC
+const mockTedContacts = [
+  { name: "Marcos Oliveira", cpf: "***.987.654-**", bank: "341 — Itaú Unibanco S.A.", agency: "1234", account: "56789-0" },
+  { name: "Ana Paula Souza", cpf: "***.123.456-**", bank: "260 — Nu Pagamentos S.A. (Nubank)", agency: "0001", account: "98765-4" },
+  { name: "Juliana Lima", cpf: "***.555.444-**", bank: "237 — Banco Bradesco S.A.", agency: "4321", account: "11223-3" },
+  { name: "Carlos Eduardo", cpf: "***.888.777-**", bank: "001 — Banco do Brasil S.A.", agency: "3344", account: "44556-7" },
 ];
 
 function formatCurrency(value: number) {
@@ -97,8 +107,8 @@ function Index() {
   const [showSearch, setShowSearch] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
 
-  // VERSÃO GERAL DA DASHBOARD (V1 VS V2)
-  const [dashVersion, setDashVersion] = useState<"v1" | "v2">("v2");
+  // VERSÃO GERAL DA DASHBOARD (V1, V2 E V3)
+  const [dashVersion, setDashVersion] = useState<"v1" | "v2" | "v3">("v3");
 
   // MODO DE FLUXO DO PIX (FLUXO 1 VS FLUXO 2)
   const [pixFlowMode, setPixFlowMode] = useState<"fluxo1" | "fluxo2">("fluxo2");
@@ -110,7 +120,7 @@ function Index() {
   const [showMenuA, setShowMenuA] = useState(false);
   const [contactSearchQuery, setContactSearchQuery] = useState("");
 
-  // DADOS DO DESTINATÁRIO
+  // DADOS DO DESTINATÁRIO DO PIX
   const [recipientName, setRecipientName] = useState("Ana Paula Souza");
   const [recipientKey, setRecipientKey] = useState("(11) 98765-4321");
   const [recipientBank, setRecipientBank] = useState("Banco Lume");
@@ -127,20 +137,45 @@ function Index() {
   const [depositAmount, setDepositAmount] = useState("100,00");
   const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
 
+  // ESTADOS DE TED/DOC
+  const [showTedModal, setShowTedModal] = useState(false);
+  const [tedStep, setTedStep] = useState<"form" | "confirm" | "success">("form");
+  const [tedMode, setTedMode] = useState<"manual" | "contacts">("manual");
+  const [tedBank, setTedBank] = useState("341 — Itaú Unibanco S.A.");
+  const [tedAgency, setTedAgency] = useState("");
+  const [tedAccount, setTedAccount] = useState("");
+  const [tedName, setTedName] = useState("");
+  const [tedCpf, setTedCpf] = useState("");
+  const [tedAmount, setTedAmount] = useState("300,00");
+  const [tedDescription, setTedDescription] = useState("");
+
+  // ESTADO DE TRANSFERÊNCIA UNIFICADA (V3)
+  const [showTransferHubModal, setShowTransferHubModal] = useState(false);
+
+  // CONFIGURAÇÃO DOS ATALHOS RÁPIDOS CONFORME A VERSÃO DA DASHBOARD
   const shortcuts: Shortcut[] = dashVersion === "v1"
     ? [
         { label: "Pix", icon: QrCode, tone: "primary" },
         { label: "Pagar", icon: ReceiptText },
-        { label: "Transferir", icon: Send },
+        { label: "TED/DOC", icon: Send },
         { label: "Depositar", icon: ArrowDownLeft },
         { label: "Recarga", icon: Smartphone },
         { label: "Empréstimos", icon: HandCoins },
       ]
-    : [
+    : dashVersion === "v2"
+    ? [
         { label: "Pix", icon: QrCode, tone: "primary" },
         { label: "Pagar", icon: ReceiptText },
-        { label: "Transferir", icon: Send },
+        { label: "TED/DOC", icon: Send },
         { label: "Boleto", icon: Barcode },
+        { label: "Recarga", icon: Smartphone },
+        { label: "Empréstimos", icon: HandCoins },
+      ]
+    : [
+        // DASH V3: REÚNE PIX E TED/DOC DENTRO DE "TRANSFERIR"
+        { label: "Transferir", icon: Send, tone: "primary" },
+        { label: "Pagar", icon: ReceiptText },
+        { label: "Depositar", icon: ArrowDownLeft },
         { label: "Recarga", icon: Smartphone },
         { label: "Empréstimos", icon: HandCoins },
       ];
@@ -161,6 +196,23 @@ function Index() {
     setSelectedShortcut("Boleto");
     setDepositStep("boleto_form");
     setShowDepositModal(true);
+  };
+
+  const openTedModal = () => {
+    setSelectedShortcut("TED/DOC");
+    setTedStep("form");
+    if (tedMode === "manual") {
+      setTedAgency("");
+      setTedAccount("");
+      setTedName("");
+      setTedCpf("");
+    }
+    setShowTedModal(true);
+  };
+
+  const openTransferHubModal = () => {
+    setSelectedShortcut("Transferir");
+    setShowTransferHubModal(true);
   };
 
   const selectContact = (contact: (typeof mockContacts)[0]) => {
@@ -224,29 +276,38 @@ Status: Aguardando Pagamento
 
   return (
     <main className="min-h-screen bg-canvas pb-28 text-foreground lg:pb-10">
-      {/* BARRA SUPERIOR DE VERSÕES DA DASHBOARD */}
+      {/* SELETOR DE VERSÃO DA DASHBOARD (V1, V2 E V3) */}
       <div className="bg-black/90 text-white px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-bold uppercase tracking-wider text-highlight">Versão do App:</span>
           <span className="text-gray-300">
-            {dashVersion === "v1" ? "Dash V1 (Depositar + Pix no Depósito)" : "Dash V2 (Boleto no lugar de Depositar + Minha Chave no Pix)"}
+            {dashVersion === "v1" && "Dash V1 (TED/DOC + Depositar)"}
+            {dashVersion === "v2" && "Dash V2 (TED/DOC + Boleto)"}
+            {dashVersion === "v3" && "Dash V3 (Transferir reunindo Pix e TED/DOC)"}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-md">
+        <div className="flex flex-wrap items-center gap-1.5 bg-white/10 p-1 rounded-md">
           <button
             type="button"
             onClick={() => setDashVersion("v1")}
             className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v1" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
           >
-            Dash Versão 1
+            Dash V1
           </button>
           <button
             type="button"
             onClick={() => setDashVersion("v2")}
             className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v2" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
           >
-            Dash Versão 2 (Nova)
+            Dash V2
+          </button>
+          <button
+            type="button"
+            onClick={() => setDashVersion("v3")}
+            className={`px-3 py-1 rounded font-bold transition ${dashVersion === "v3" ? "bg-accent text-accent-foreground shadow-xs" : "text-gray-300 hover:text-white"}`}
+          >
+            Dash V3 (Unificada)
           </button>
         </div>
       </div>
@@ -375,6 +436,8 @@ Status: Aguardando Pagamento
                     if (label === "Pix") openPixModal();
                     else if (label === "Depositar") openDepositModal();
                     else if (label === "Boleto") openBoletoModal();
+                    else if (label === "TED/DOC") openTedModal();
+                    else if (label === "Transferir") openTransferHubModal();
                     else setSelectedShortcut(label);
                   }}
                   className={`group flex min-h-24 flex-col items-center justify-center gap-2 border-border px-2 py-4 text-xs font-semibold transition hover:bg-muted focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary ${index > 3 ? "hidden lg:flex" : ""}`}
@@ -389,7 +452,7 @@ Status: Aguardando Pagamento
               ))}
             </div>
           </div>
-          {selectedShortcut && !showPixModal && !showDepositModal && (
+          {selectedShortcut && !showPixModal && !showDepositModal && !showTedModal && !showTransferHubModal && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3 text-sm shadow-sm">
               <p className="min-w-0 truncate">
                 <span className="font-bold">{selectedShortcut}</span> selecionado
@@ -505,6 +568,69 @@ Status: Aguardando Pagamento
           </aside>
         </div>
       </div>
+
+      {/* MODAL DE TRANSFERÊNCIA UNIFICADA (EXCLUSIVO DA DASH V3) */}
+      {showTransferHubModal && dashVersion === "v3" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border p-5">
+              <div>
+                <h2 className="text-lg font-bold">Transferir Dinheiro</h2>
+                <p className="text-xs text-muted-foreground">Escolha o tipo de transferência desejado</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTransferHubModal(false)}
+                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTransferHubModal(false);
+                  openPixModal();
+                }}
+                className="flex w-full items-center justify-between rounded-xl border border-border bg-canvas p-4 text-left hover:bg-muted hover:border-primary/40 transition shadow-xs"
+              >
+                <div className="flex items-center gap-3.5">
+                  <span className="grid h-11 w-11 place-items-center rounded-full bg-accent text-accent-foreground">
+                    <QrCode size={21} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Transferência via Pix</p>
+                    <p className="text-xs text-muted-foreground">Instantâneo 24h por Chave Pix, QR Code ou Copia e Cola</p>
+                  </div>
+                </div>
+                <ChevronRight size={19} className="text-muted-foreground" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTransferHubModal(false);
+                  openTedModal();
+                }}
+                className="flex w-full items-center justify-between rounded-xl border border-border bg-canvas p-4 text-left hover:bg-muted hover:border-primary/40 transition shadow-xs"
+              >
+                <div className="flex items-center gap-3.5">
+                  <span className="grid h-11 w-11 place-items-center rounded-full bg-primary/10 text-primary">
+                    <Send size={21} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Transferência via TED / DOC</p>
+                    <p className="text-xs text-muted-foreground">Transferência tradicional usando Banco, Agência e Conta</p>
+                  </div>
+                </div>
+                <ChevronRight size={19} className="text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AMBIENTE DE PIX */}
       {showPixModal && (
@@ -668,8 +794,8 @@ Status: Aguardando Pagamento
                     </div>
                   </button>
 
-                  {/* NA DASH V2: EXIBIR BOTÃO "MINHAS CHAVES & QR CODE" DENTRO DO PIX */}
-                  {dashVersion === "v2" && (
+                  {/* NA DASH V2 E V3: EXIBIR BOTÃO "MINHAS CHAVES & QR CODE" DENTRO DO PIX */}
+                  {(dashVersion === "v2" || dashVersion === "v3") && (
                     <button
                       type="button"
                       onClick={() => setPixStep("my_key")}
@@ -733,8 +859,7 @@ Status: Aguardando Pagamento
             {/* FLUXO 2: PIX COPIA E COLA DESTACADO */}
             {pixStep === "hub" && pixFlowMode === "fluxo2" && (
               <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-                {/* BOTÃO "MINHAS CHAVES & QR CODE" NA V2 DENTRO DO PIX */}
-                {dashVersion === "v2" && (
+                {(dashVersion === "v2" || dashVersion === "v3") && (
                   <button
                     type="button"
                     onClick={() => setPixStep("my_key")}
@@ -838,10 +963,9 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* MINHAS CHAVES & GERADOR DE QR CODE DA CONTA (COMPLETO) */}
+            {/* MINHAS CHAVES & GERADOR DE QR CODE */}
             {pixStep === "my_key" && (
               <div className="p-6 space-y-5 text-center max-h-[80vh] overflow-y-auto">
-                {/* QR CODE PRÓPRIO GERADO DA CONTA LUME */}
                 <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Seu QR Code Pix (Conta Lume)
@@ -856,13 +980,11 @@ Status: Aguardando Pagamento
                   </p>
                 </div>
 
-                {/* OPÇÕES DE CHAVES DE RECEBIMENTO (E-MAIL E CHAVE ALEATÓRIA) */}
                 <div className="space-y-3 text-left">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Suas Chaves Pix para Compartilhar
                   </p>
 
-                  {/* CHAVE 1: E-MAIL */}
                   <div className="rounded-lg bg-canvas border border-border p-3 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold uppercase text-muted-foreground block">Chave E-mail</span>
@@ -877,7 +999,6 @@ Status: Aguardando Pagamento
                     </button>
                   </div>
 
-                  {/* CHAVE 2: ALEATÓRIA */}
                   <div className="rounded-lg bg-canvas border border-border p-3 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold uppercase text-muted-foreground block">Chave Aleatória (EVP)</span>
@@ -897,7 +1018,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* TELA DE SCANNER DE QR CODE */}
             {pixStep === "qrcode" && (
               <div className="p-6 space-y-6 text-center">
                 <div className="relative mx-auto flex h-64 w-64 items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-black/90 p-4 shadow-inner overflow-hidden">
@@ -927,7 +1047,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* TELA DE DIGITAR CHAVE PIX */}
             {pixStep === "key_entry" && (
               <div className="p-6 space-y-5">
                 <div className="space-y-2">
@@ -956,7 +1075,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* PASSO FORM */}
             {pixStep === "form" && (
               <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
                 <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3">
@@ -1132,11 +1250,497 @@ Status: Aguardando Pagamento
         </div>
       )}
 
-      {/* AMBIENTE COMPLETO DE DEPÓSITO OU BOLETO (EQUIVALÊNCIA TOTAL V1 E V2) */}
-      {showDepositModal && (
+      {/* AMBIENTE DE TED/DOC (TRANSFERÊNCIA TRADICIONAL) */}
+      {showTedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* HEADER DO MODAL */}
+            <div className="flex items-center justify-between border-b border-border p-5">
+              <div className="flex items-center gap-3">
+                {tedStep !== "form" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (tedStep === "confirm") setTedStep("form");
+                      if (tedStep === "success") setShowTedModal(false);
+                    }}
+                    className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold">
+                    {tedStep === "form" && "Transferência TED / DOC"}
+                    {tedStep === "confirm" && "Confirmação de TED"}
+                    {tedStep === "success" && "TED Realizada com Sucesso!"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {tedStep === "form" && "Informe os dados bancários do destinatário"}
+                    {tedStep === "confirm" && "Revise os dados abaixo. Os dados do favorecido foram travados para segurança."}
+                    {tedStep === "success" && "Comprovante de transferência bancária"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTedModal(false)}
+                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* PASSO 1: FORMULÁRIO DE TED (DIGITAR OU SELECIONAR CONTATO) */}
+            {tedStep === "form" && (
+              <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                {/* TABS DE SELEÇÃO DE MODO */}
+                <div className="flex rounded-lg bg-canvas p-1 border border-border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTedMode("manual");
+                      setTedAgency("");
+                      setTedAccount("");
+                      setTedName("");
+                      setTedCpf("");
+                    }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${
+                      tedMode === "manual"
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    ✏️ Digitar Agência e Conta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTedMode("contacts");
+                      const first = mockTedContacts[0];
+                      if (first) {
+                        setTedName(first.name);
+                        setTedCpf(first.cpf);
+                        setTedBank(first.bank);
+                        setTedAgency(first.agency);
+                        setTedAccount(first.account);
+                      }
+                    }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${
+                      tedMode === "contacts"
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    👥 Meus Contatos Salvos
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* SELEÇÃO DO MODO CONTATOS */}
+                  {tedMode === "contacts" && (
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                        Favorecido da Lista
+                      </label>
+                      <select
+                        onChange={(e) => {
+                          const contact = mockTedContacts[Number(e.target.value)];
+                          if (contact) {
+                            setTedName(contact.name);
+                            setTedCpf(contact.cpf);
+                            setTedBank(contact.bank);
+                            setTedAgency(contact.agency);
+                            setTedAccount(contact.account);
+                          }
+                        }}
+                        className="w-full rounded-md border border-border bg-canvas px-4 py-2.5 text-sm font-bold outline-hidden focus:border-primary"
+                      >
+                        {mockTedContacts.map((contact, idx) => (
+                          <option key={contact.name} value={idx}>
+                            {contact.name} — {contact.bank.split("—")[1]?.trim() || contact.bank} ({contact.agency}/{contact.account})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* DIGITAÇÃO MANIFESTA DE BANCO, AGÊNCIA E CONTA */}
+                  {tedMode === "manual" && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                          Banco de Destino
+                        </label>
+                        <select
+                          value={tedBank}
+                          onChange={(e) => setTedBank(e.target.value)}
+                          className="w-full rounded-md border border-border bg-canvas px-4 py-2.5 text-sm font-bold outline-hidden focus:border-primary"
+                        >
+                          <option value="341 — Itaú Unibanco S.A.">341 — Itaú Unibanco S.A.</option>
+                          <option value="260 — Nu Pagamentos S.A. (Nubank)">260 — Nu Pagamentos S.A. (Nubank)</option>
+                          <option value="237 — Banco Bradesco S.A.">237 — Banco Bradesco S.A.</option>
+                          <option value="001 — Banco do Brasil S.A.">001 — Banco do Brasil S.A.</option>
+                          <option value="033 — Banco Santander Brasil">033 — Banco Santander Brasil</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                            Agência (4 dígitos, sem dígito)
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={tedAgency}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              setTedAgency(digits);
+                            }}
+                            placeholder="Ex: 1234"
+                            className="w-full rounded-md border border-border bg-canvas px-4 py-2.5 text-sm font-bold outline-hidden focus:border-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                            Conta com Dígito
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={10}
+                            value={tedAccount}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9-]/g, "").slice(0, 10);
+                              setTedAccount(val);
+                            }}
+                            placeholder="Ex: 56789-0"
+                            className="w-full rounded-md border border-border bg-canvas px-4 py-2.5 text-sm font-bold outline-hidden focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* DADOS DE TITULARIDADE RESOLVIDOS AUTOMATICAMENTE OU PLACEHOLDER DE CONSULTA */}
+                  {(() => {
+                    if (tedMode === "contacts") {
+                      return (
+                        <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3 animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                              <Lock size={12} className="text-primary" /> Titularidade Consultada pelo Banco
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 size={10} /> Titular Encontrado
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
+                                Nome do Favorecido
+                              </label>
+                              <input
+                                type="text"
+                                value={tedName}
+                                readOnly
+                                disabled
+                                className="w-full rounded-md border border-border/80 bg-muted/60 px-3.5 py-2 text-sm font-medium text-muted-foreground cursor-not-allowed select-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
+                                CPF / CNPJ
+                              </label>
+                              <input
+                                type="text"
+                                value={tedCpf}
+                                readOnly
+                                disabled
+                                className="w-full rounded-md border border-border/80 bg-muted/60 px-3.5 py-2 text-sm font-mono font-medium text-muted-foreground cursor-not-allowed select-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const cleanAg = tedAgency.trim().replace(/\D/g, "");
+                    const cleanAcc = tedAccount.trim().replace(/\D/g, "");
+                    const isAgComplete = cleanAg.length === 4;
+                    const isAccComplete = cleanAcc.length >= 5;
+
+                    // Busca exata nos contatos simulados pela agência e conta
+                    const matched = isAgComplete && isAccComplete
+                      ? mockTedContacts.find(
+                          (c) => c.agency.replace(/\D/g, "") === cleanAg && c.account.replace(/\D/g, "") === cleanAcc
+                        )
+                      : null;
+
+                    if (matched) {
+                      return (
+                        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4 space-y-3 animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                              <Lock size={12} className="text-emerald-600 dark:text-emerald-400" /> Titularidade Confirmada
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 size={10} /> Titular Validação OK
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
+                                Nome do Favorecido
+                              </label>
+                              <input
+                                type="text"
+                                value={matched.name}
+                                readOnly
+                                disabled
+                                className="w-full rounded-md border border-border/80 bg-muted/60 px-3.5 py-2 text-sm font-bold text-foreground cursor-not-allowed select-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">
+                                CPF / CNPJ
+                              </label>
+                              <input
+                                type="text"
+                                value={matched.cpf}
+                                readOnly
+                                disabled
+                                className="w-full rounded-md border border-border/80 bg-muted/60 px-3.5 py-2 text-sm font-mono font-bold text-foreground cursor-not-allowed select-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (isAgComplete && isAccComplete) {
+                      return (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-2.5 text-left animate-in fade-in duration-200">
+                          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                            <AlertCircle size={15} />
+                            <span>Titular não encontrado para esta Agência e Conta</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            No modo de teste, somente dados de exemplo cadastrados são validados. Escolha um favorecido de exemplo abaixo para preencher automaticamente:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {mockTedContacts.map((c) => (
+                              <button
+                                key={c.name}
+                                type="button"
+                                onClick={() => {
+                                  setTedBank(c.bank);
+                                  setTedAgency(c.agency);
+                                  setTedAccount(c.account);
+                                  setTedName(c.name);
+                                  setTedCpf(c.cpf);
+                                }}
+                                className="text-[10px] font-semibold bg-canvas hover:bg-muted border border-border px-2.5 py-1 rounded transition text-foreground flex items-center gap-1 shadow-2xs"
+                              >
+                                <span className="font-bold text-primary">{c.name.split(" ")[0]}:</span> Ag {c.agency} • Cc {c.account}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="rounded-xl border border-dashed border-border/80 bg-canvas p-4 text-center space-y-1.5 animate-in fade-in duration-200">
+                        <div className="text-xs font-bold text-muted-foreground flex items-center justify-center gap-1.5">
+                          <Search size={16} className="text-primary animate-pulse" />
+                          <span>Aguardando digitação correta (Agência: 4 dígitos | Conta: 5+ dígitos)</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground/80 max-w-sm mx-auto">
+                          Digite a agência de 4 dígitos e a conta correspondentes ao favorecido para que o nome e CPF sejam consultados.
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* CAMPO EDITÁVEL: VALOR DA TRANSFERÊNCIA */}
+                  <div className="pt-1">
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                      Valor da Transferência (R$)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-2.5 font-bold text-muted-foreground">R$</span>
+                      <input
+                        type="text"
+                        value={tedAmount}
+                        onChange={(e) => setTedAmount(e.target.value)}
+                        className="w-full rounded-md border border-border bg-canvas pl-12 pr-4 py-2.5 text-lg font-bold outline-hidden focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    tedMode === "manual"
+                      ? !mockTedContacts.find(
+                          (c) =>
+                            c.agency.replace(/\D/g, "") === tedAgency.trim().replace(/\D/g, "") &&
+                            c.account.replace(/\D/g, "") === tedAccount.trim().replace(/\D/g, "")
+                        )
+                      : false
+                  }
+                  onClick={() => {
+                    if (tedMode === "manual") {
+                      const cleanAg = tedAgency.trim().replace(/\D/g, "");
+                      const cleanAcc = tedAccount.trim().replace(/\D/g, "");
+                      const matched = mockTedContacts.find(
+                        (c) => c.agency.replace(/\D/g, "") === cleanAg && c.account.replace(/\D/g, "") === cleanAcc
+                      );
+                      if (matched) {
+                        setTedName(matched.name);
+                        setTedCpf(matched.cpf);
+                        setTedBank(matched.bank);
+                      }
+                    }
+                    setTedStep("confirm");
+                  }}
+                  className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continuar para Confirmação <ArrowRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {/* PASSO 2: TELA DE CONFIRMAÇÃO COM DADOS TRAVADOS (READ-ONLY) */}
+            {tedStep === "confirm" && (
+              <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+                <div className="rounded-xl border border-border bg-canvas p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Lock size={14} className="text-primary" /> Dados do Destinatário (Travados)
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                      ✓ Dados Validados
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-sm">
+                    <div className="flex justify-between items-center py-1 border-b border-border/50">
+                      <span className="text-muted-foreground">Favorecido:</span>
+                      <span className="font-bold text-foreground">{tedName}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1 border-b border-border/50">
+                      <span className="text-muted-foreground">CPF / CNPJ:</span>
+                      <span className="font-mono font-medium text-foreground">{tedCpf}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1 border-b border-border/50">
+                      <span className="text-muted-foreground">Banco:</span>
+                      <span className="font-medium text-foreground">{tedBank}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-muted-foreground">Agência / Conta:</span>
+                      <span className="font-mono font-medium text-foreground">Ag {tedAgency} • Cc {tedAccount}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-muted-foreground">Valor a Transferir:</span>
+                    <span className="text-2xl font-black text-primary">R$ {tedAmount}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground border-t border-primary/10 pt-2">
+                    <span>Tarifa de transferência:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">Gratuito (R$ 0,00)</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                    <span>Prazo de liquidação:</span>
+                    <span>Até o fim do dia útil</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setTedStep("success")}
+                    className="w-full flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-base font-bold text-primary-foreground transition hover:bg-primary-strong shadow-card"
+                  >
+                    <CheckCircle2 size={20} /> Confirmar e Enviar TED de R$ {tedAmount}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTedStep("form")}
+                    className="w-full h-10 text-xs font-semibold text-muted-foreground hover:text-foreground transition"
+                  >
+                    Voltar e alterar dados
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 3: COMPROVANTE DE SUCESSO DO TED */}
+            {tedStep === "success" && (
+              <div className="p-6 space-y-5 text-center max-h-[80vh] overflow-y-auto">
+                <div className="grid h-16 w-16 place-items-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto">
+                  <CheckCircle2 size={36} />
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-extrabold text-foreground">Transferência realizada!</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    TED de <strong>R$ {tedAmount}</strong> enviada com sucesso para <strong>{tedName}</strong>.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border bg-canvas p-4 text-left space-y-2.5 text-xs">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Autenticação bancária:</span>
+                    <span className="font-mono text-foreground font-bold">TED-20260926-984321</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Data / Hora:</span>
+                    <span className="text-foreground">26/09/2026 às 20:41</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Banco de Origem:</span>
+                    <span className="text-foreground">Banco Lume S.A. (341)</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Favorecido:</span>
+                    <span className="text-foreground font-semibold">{tedName}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Banco Favorecido:</span>
+                    <span className="text-foreground">{tedBank}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowTedModal(false)}
+                  className="w-full h-12 rounded-lg bg-primary text-base font-bold text-primary-foreground hover:bg-primary-strong transition shadow-card"
+                >
+                  Concluir e Fechar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AMBIENTE DE DEPÓSITO OU BOLETO */}
+      {showDepositModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-border p-5">
               <div className="flex items-center gap-3">
                 {depositStep !== "options" && dashVersion === "v1" && (
@@ -1178,7 +1782,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* FLUXO DA V1: OPÇÕES DE DEPÓSITO */}
             {depositStep === "options" && dashVersion === "v1" && (
               <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
                 <button
@@ -1234,7 +1837,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* PIX ME DA V1 (IGUALMENTE COMPLETO COM QR CODE E CHAVE ALEATÓRIA) */}
             {depositStep === "pix_me" && dashVersion === "v1" && (
               <div className="p-6 space-y-5 text-center max-h-[80vh] overflow-y-auto">
                 <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
@@ -1289,7 +1891,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* PASSO: FORMULÁRIO DO BOLETO */}
             {depositStep === "boleto_form" && (
               <div className="p-6 space-y-5">
                 <div className="space-y-2">
@@ -1321,7 +1922,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* PASSO: BOLETO GERADO */}
             {depositStep === "boleto_generated" && (
               <div className="p-6 space-y-5 text-center">
                 <div className="rounded-xl border border-border bg-canvas p-5 space-y-4">
@@ -1377,7 +1977,6 @@ Status: Aguardando Pagamento
               </div>
             )}
 
-            {/* PORTABILIDADE */}
             {depositStep === "portabilidade" && (
               <div className="p-6 space-y-5">
                 <div className="rounded-xl border border-border bg-canvas p-5 space-y-3">
