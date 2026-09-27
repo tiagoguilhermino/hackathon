@@ -3,13 +3,14 @@ import type { Anomaly, AnalystReport, Severity, SimulationEvidence, SimulationSt
 import type { ScreenSnapshot } from "@/types/simulation";
 import { FLOWS, SCREEN_TITLES } from "../bank/flows";
 import { DIMENSION_LABELS } from "../analytics/stats";
-import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
+import { DEFAULT_MOCK_LATENCY_MS, callLLM, resolveLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
 import { compactJson } from "../llm/compact";
 
 export interface AnalystRequest {
   stats: SimulationStats;
   screens: Record<string, ScreenSnapshot>;
   evidence: SimulationEvidence;
+  mode?: "mock" | "live";
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -157,7 +158,7 @@ export function mockAnalyst(req: AnalystRequest): AnalystReport {
 
 export async function runAnalyst(req: AnalystRequest): Promise<AnalystReport & { prompt: LlmPrompt; usage: LlmUsage | null }> {
   const prompt = buildAnalystPrompt(req);
-  if (getLlmMode() === "mock") {
+  if (resolveLlmMode(req.mode) === "mock") {
     await simulateLatency(DEFAULT_MOCK_LATENCY_MS * 4);
     return { ...mockAnalyst(req), prompt, usage: null };
   }

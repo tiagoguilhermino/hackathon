@@ -95,6 +95,7 @@ async function runAgent(
         seed,
         step,
         mockLatencyMs: config.mockLatencyMs,
+        mode: config.llmMode,
       });
     } catch (err) {
       errorMessage = (err as Error).message;

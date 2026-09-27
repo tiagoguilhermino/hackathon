@@ -14,7 +14,7 @@ import { acceptableActionIds, optimalAction } from "../bank/oracle";
 import { PROFESSION_LABELS, literacyBand } from "../personas/config";
 import { clamp, createRng, hashSeed, logNormal, pick, type Rng } from "../random";
 import * as z from "zod/v4";
-import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, simulateLatency, type LlmPrompt } from "../llm/client";
+import { DEFAULT_MOCK_LATENCY_MS, callLLM, resolveLlmMode, simulateLatency, type LlmPrompt } from "../llm/client";
 
 // ---------------------------------------------------------------------------
 // Prompt
@@ -254,7 +254,7 @@ export async function runNavigator(req: NavigatorRequest): Promise<NavigatorResp
   const cognitiveLoad = analyzeCognitiveLoad(req.tree);
   const prompt = buildNavigatorPrompt(req, cognitiveLoad);
   const optimal = optimalAction(req.flowId, req.tree, req.persona, createRng(hashSeed(req.seed, req.step, 0x51ed)));
-  const mode = getLlmMode();
+  const mode = resolveLlmMode(req.mode);
 
   let decision: NavigatorDecision;
   let usage: NavigatorResponse["usage"] = null;
