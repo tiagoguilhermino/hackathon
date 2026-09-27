@@ -84,7 +84,13 @@ export function DashboardView() {
         });
         if (cancelled) return;
         setReports({ runId: run.id, analyst });
-        const designer = await postJson<DesignerReport>("/api/agents/designer", { analyst, stats, screens: run.screens, mode: run.config.llmMode });
+        const designer = await postJson<DesignerReport>("/api/agents/designer", {
+          analyst,
+          stats,
+          screens: run.screens,
+          mode: run.config.llmMode,
+          screenVersion: run.config.version,
+        });
         if (!cancelled) {
           setReports({ runId: run.id, analyst, designer });
           saveReports(run.id, { analyst, designer });

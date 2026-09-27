@@ -61,6 +61,26 @@ Nos botões só com desenho, o agente lê a descrição do desenho ("ícone sem 
 
 As simulações, os relatórios dos agentes e as decisões ficam **só neste navegador** (localStorage). Guarde as decisões com o botão "Baixar registro (JSON)". O registro só cresce e, se estiver ilegível, o app não grava por cima.
 
+## Variações de tela do Lume no Agente Designer
+
+No Dashboard, embaixo das propostas do Agente Designer, fica a seção **"Variações de tela por perfil de cliente"**. Ela usa as telas que o Iury desenhou no frontend Lume (`Frontend/itau-hackathon-bank-main`, "Laboratório de cenários"):
+
+| Grupo | Variações (prévias em `public/previas/`) |
+|---|---|
+| Tela inicial | Dash V1 (Pix com atalho próprio), Dash V2 (Boleto com atalho), Dash V3 (Transferir agrupado), Pagar boleto e Fatura separados |
+| Início do Pix | Fluxo 1 (contatos salvos), Fluxo 2 (Copia e Cola e chave) |
+| Repetir todo mês | A (dentro do ⋯), B (só ícone), C (com texto) |
+
+Para cada perfil de cliente que ficou bem abaixo da média, o agente escolhe no catálogo as variações que atacam a tela onde esse perfil mais parou. Cada indicação mostra a prévia, os números do perfil e o porquê, e passa pela revisão humana, como as propostas.
+
+- **Simulado:** uma regra no código escolhe a variação pela tela onde o perfil parou (literacia e idade). Confirmação do Pix → Repetir C; início do Pix → Fluxo 1; tela inicial → Dash V1 no Pix e Dash V3 no empréstimo. A regra está em `variationsForScreen`, em `src/lib/design/variations.ts`.
+- **LLM real:** o agente recebe o catálogo e escolhe sozinho, só entre os ids do catálogo. O código tira a versão já testada e as repetições. Testado em 27/09: cerca de 7 s e 2.500 + 2.700 tokens por análise.
+- O catálogo inteiro fica em "Catálogo de variações do Lume (9 prévias)". Clicar numa prévia abre a imagem em tamanho real. Com `NEXT_PUBLIC_LUME_URL` no `.env.local` (ex.: `http://localhost:5174`), cada prévia ganha o link "abrir no Lume", com o app do Iury rodando.
+
+**Refazer as prévias** (depois de o Iury mudar as telas): suba o frontend Lume (`cd Frontend/itau-hackathon-bank-main && npm run dev -- --port 5174 --host 127.0.0.1`) e rode `python itau-ux-lab/scripts/capturar_previas.py`.
+- O script usa o modo limpo do app e não altera o código dele. Só na página que ele abre, troca os bancos reais da lista de contatos por fictícios e o nome da saudação por "Cliente", e pinta o ícone da versão B, que no app está branco sobre branco.
+- Se sobrar algum termo proibido na tela, ele para com erro.
+
 ## Versões do prompt
 
 A versão usada fica gravada em cada simulação e aparece no Dashboard. Mudou o texto de um prompt? Suba a versão em `src/lib/agents/versions.ts` e acrescente uma linha aqui.
@@ -70,6 +90,7 @@ A versão usada fica gravada em cada simulação e aparece no Dashboard. Mudou o
 | `nav-v1` | Prompt do Agente Navegador do Victor, com duas mudanças: o banco passa a ser o Lume (fictício) e há uma linha explicando os botões "ícone sem texto". |
 | `ana-v1` | Prompt do Agente Analista do Victor, mais: o que é "concluiu errado" e a instrução de escrever achados como hipóteses. |
 | `des-v1` | Prompt do Agente Designer do Victor, mais: cada proposta é uma hipótese e quem decide é o designer ou o PO. |
+| `des-v2` | `des-v1` mais as variações de tela do Lume por perfil (catálogo, desempenho por perfil e a versão testada); esforço de raciocínio "médio", porque no "alto" a resposta às vezes estourava o limite antes de fechar o JSON. |
 
 ## Checagens
 

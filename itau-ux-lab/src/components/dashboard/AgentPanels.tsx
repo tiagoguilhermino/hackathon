@@ -3,6 +3,7 @@ import type { AnalystReport, DesignerReport, HumanDecision, Severity } from "@/t
 import { SCREEN_TITLES } from "@/lib/bank/flows";
 import { SimulationBadge } from "../common/PrototypeNotice";
 import { HumanReview, type NewDecision } from "./HumanReview";
+import { LayoutVariations } from "./LayoutVariations";
 
 const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string; label: string }> = {
   alta: { icon: AlertOctagon, className: "bg-red-50 text-red-700 border-red-200", label: "Severidade alta" },
@@ -126,6 +127,7 @@ export function DesignerPanel({ report, error, waiting, runId, decisions = [], o
           {!report.proposals.length && <p className="text-sm text-neutral-500">Nenhuma mudança necessária.</p>}
         </div>
       )}
+      {report && runId && <LayoutVariations layouts={report.layouts} runId={runId} decisions={decisions} onDecide={onDecide} />}
     </section>
   );
 }

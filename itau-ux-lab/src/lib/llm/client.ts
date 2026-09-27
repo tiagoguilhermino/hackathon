@@ -63,11 +63,13 @@ function getClient(): Groq {
 }
 
 /**
- * Chave recusada (revogada) ou limite esgotado mesmo depois das retentativas: passa para a
- * próxima chave, se houver, e zera o controle de vazão (o limite é por chave).
+ * Chave recusada (revogada), limite esgotado mesmo depois das retentativas, ou pedido maior que o
+ * saldo de tokens do minuto (413): passa para a próxima chave, se houver, e zera o controle de
+ * vazão (o limite é por chave).
  */
 function switchKey(err: unknown): boolean {
-  const keyProblem = err instanceof Groq.AuthenticationError || err instanceof Groq.RateLimitError;
+  const keyProblem =
+    err instanceof Groq.AuthenticationError || err instanceof Groq.RateLimitError || (err instanceof Groq.APIError && err.status === 413);
   if (!keyProblem || keyIndex >= API_KEYS.length - 1) return false;
   keyIndex += 1;
   tpm.limit = 0;
@@ -210,7 +212,7 @@ export async function callLLM<S extends z.ZodType>({
       }
       if (err instanceof Groq.AuthenticationError) throw new LlmError("Chave da Groq recusada (inválida ou revogada): confira src/lib/llm/keys.ts ou o .env.local.");
       if (err instanceof Groq.RateLimitError) throw new LlmError(`Limite da Groq atingido: ${err.message}`);
-      if (err instanceof Groq.APIError && err.status === 413) throw new LlmError("Prompt maior que o limite de tokens/minuto do plano Groq.");
+      if (err instanceof Groq.APIError && err.status === 413) throw new LlmError(`Prompt maior que o limite de tokens/minuto do plano Groq. (${err.message})`);
       if (err instanceof Groq.APIError) throw new LlmError(`Erro da API Groq (${err.status}): ${err.message}`);
       throw err;
     }

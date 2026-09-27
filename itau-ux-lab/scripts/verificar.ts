@@ -7,7 +7,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { PROMPT_VERSIONS } from "../src/lib/agents/versions";
 import { buildAnalystPrompt, mockAnalyst } from "../src/lib/agents/analyst";
-import { buildDesignerPrompt, mockDesigner } from "../src/lib/agents/designer";
+import { buildDesignerPrompt, cleanLayouts, mockDesigner, mockLayouts } from "../src/lib/agents/designer";
+import { VARIATIONS, VARIATION_GROUPS, VARIATION_IDS } from "../src/lib/design/variations";
 import { buildNavigatorPrompt, mockNavigatorPolicy, sanitizeDecision } from "../src/lib/agents/navigator";
 import { analyzeCognitiveLoad } from "../src/lib/a11y/cognitive-load";
 import { computeStats } from "../src/lib/analytics/stats";
@@ -241,6 +242,56 @@ function agent(index: number, persona: Persona, outcome: AgentRun["outcome"], ex
   const prompts = [buildAnalystPrompt({ stats, screens: {}, evidence: { abandonments: [], frequentDeviations: [] } }), buildDesignerPrompt({ analyst, stats, screens: {} })];
   check(prompts.every((p) => !/ita[uú]/i.test(p.system + p.user)), "prompts do analista e do designer sem o nome do Itaú");
   check(prompts.every((p) => /hip[óo]tese/i.test(p.system)), "analista e designer são instruídos a tratar achados como hipótese");
+}
+
+// ------------------------------------------------------------------ variações de tela do Lume (Iury) no Agente Designer
+
+{
+  check(new Set(VARIATION_IDS).size === VARIATION_IDS.length && VARIATION_IDS.every((id) => VARIATIONS[id]?.id === id), "catálogo de variações sem id repetido");
+  const missing = VARIATION_IDS.filter((id) => !existsSync(join(__dirname, "..", "public", VARIATIONS[id].preview)));
+  check(missing.length === 0, `toda variação tem prévia em public/previas${missing.length ? `: faltam ${missing.join(", ")}` : ""}`);
+  check(VARIATION_GROUPS.every((g) => VARIATION_IDS.some((id) => VARIATIONS[id].group === g)), "tela inicial, início do Pix e repetir têm prévias");
+
+  // 4 clientes de literacia alta concluem; 4 de literacia baixa terminam errado na confirmação do Pix.
+  const low = byLiteracy.slice(0, 4);
+  const high = byLiteracy.slice(-4);
+  const layoutRun = (flowId: FlowId, screen: string, version?: "A" | "B" | "C"): SimulationRun => ({
+    id: "sim-variacoes",
+    createdAt: 0,
+    config: { flowId, agentCount: 8, base: DEFAULT_PERSONA_CONFIG, visualDelayMs: 0, mockLatencyMs: 0, concurrency: 1, llmMode: "mock", version },
+    agents: [
+      ...high.map((p, i) => ({ ...agent(i, p, "success", FLOWS[flowId].successScreen), steps: [{ ...agent(i, p, "success", "").steps[0], screenId: screen, optimal: true }] })),
+      ...low.map((p, i) => ({ ...agent(4 + i, p, flowId === "pix_recorrente" ? "wrong" : "abandoned", screen), steps: [{ ...agent(4 + i, p, "wrong", "").steps[0], screenId: screen, optimal: false }] })),
+    ],
+    screens: {},
+    sampleComposition: {},
+    ageComposition: {},
+    llm: { mode: "mock", model: null, usage: { inputTokens: 0, outputTokens: 0 } },
+  });
+  const pixStats = computeStats(layoutRun("pix_recorrente", "pix-confirm", "B"));
+  const analyst = mockAnalyst({ stats: pixStats, screens: {}, evidence: { abandonments: [], frequentDeviations: [] } });
+  const forB = mockLayouts({ analyst, stats: pixStats, screens: {}, screenVersion: "B" });
+  const lowLit = forB.find((l) => l.segment === "Literacia digital: baixa");
+  check(Boolean(lowLit?.variationIds.includes("rec-c")), "literacia baixa parou na confirmação (versão B) → designer indica o Repetir C");
+  check(forB.every((l) => !l.segment.includes("alta")), "perfil que concluiu não recebe variação");
+  check(Boolean(lowLit?.rationale.includes("0 de 4 concluíram") && lowLit.rationale.includes("hipótese")), "a indicação cita os números do perfil e diz que é hipótese");
+  check(mockLayouts({ analyst, stats: pixStats, screens: {}, screenVersion: "C" }).every((l) => !l.variationIds.includes("rec-c")), "não indica a versão que já foi testada");
+
+  const loanStats = computeStats(layoutRun("emprestimo", "home"));
+  const loan = mockLayouts({ analyst, stats: loanStats, screens: {} });
+  check(loan.some((l) => l.variationIds.includes("dash-v3")), "empréstimo: quem parou na tela inicial → Dash V3 (Empréstimos na 1ª linha)");
+
+  const prompt = buildDesignerPrompt({ analyst, stats: pixStats, screens: {}, screenVersion: "B" });
+  check(VARIATION_IDS.every((id) => prompt.user.includes(id)) && prompt.user.includes("versão testada nesta simulação: B"), "o designer com LLM recebe o catálogo e a versão testada");
+  check(prompt.system.includes("layouts") && PROMPT_VERSIONS.designer === "des-v2", "prompt do designer pede as variações por perfil (des-v2)");
+  const cleaned = cleanLayouts(
+    [
+      { segment: "Faixa etária: 40-59", variationIds: ["rec-b"], rationale: "x" },
+      { segment: "Literacia digital: baixa", variationIds: ["rec-c", "rec-c", "rec-b"], rationale: "y" },
+    ],
+    "B",
+  );
+  check(cleaned.length === 1 && cleaned[0].variationIds.join() === "rec-c" && cleaned[0].id === "l1", "resposta do LLM: tira a versão testada, repetições e perfis vazios");
 }
 
 // ------------------------------------------------------------------ registro de decisões humanas
