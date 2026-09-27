@@ -13,6 +13,7 @@ interface ConfigPanelProps {
   onChange: (config: SimulationConfig) => void;
   base: Persona[];
   disabled: boolean;
+  live: boolean;
 }
 
 function NumberField({
@@ -46,7 +47,7 @@ function NumberField({
   );
 }
 
-export function ConfigPanel({ config, onChange, base, disabled }: ConfigPanelProps) {
+export function ConfigPanel({ config, onChange, base, disabled, live }: ConfigPanelProps) {
   const set = <K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => onChange({ ...config, [key]: value });
   const setBase = <K extends keyof SimulationConfig["base"]>(key: K, value: SimulationConfig["base"][K]) =>
     onChange({ ...config, base: { ...config.base, [key]: value } });
@@ -76,7 +77,10 @@ export function ConfigPanel({ config, onChange, base, disabled }: ConfigPanelPro
           <NumberField label="Tamanho da base" value={config.base.size} min={10} max={5000} step={50} onChange={(v) => setBase("size", v)} />
           <NumberField label="Seed" value={config.base.seed} min={0} max={999999} onChange={(v) => setBase("seed", v)} />
           <NumberField label="Pausa visual (ms)" value={config.visualDelayMs} min={0} max={3000} step={50} onChange={(v) => set("visualDelayMs", v)} />
-          <NumberField label="Latência LLM mock (ms)" value={config.mockLatencyMs} min={0} max={5000} step={50} onChange={(v) => set("mockLatencyMs", v)} />
+          <NumberField label="Agentes em paralelo" value={config.concurrency} min={1} max={6} onChange={(v) => set("concurrency", v)} />
+          {!live && (
+            <NumberField label="Latência mock (ms)" value={config.mockLatencyMs} min={0} max={5000} step={50} onChange={(v) => set("mockLatencyMs", v)} />
+          )}
         </div>
       </div>
 

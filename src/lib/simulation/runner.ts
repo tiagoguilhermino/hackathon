@@ -16,15 +16,25 @@ import { FLOWS } from "../bank/flows";
 import { countBy } from "../personas/sampling";
 import { hashSeed } from "../random";
 
-/** Ponte entre o loop de simulação e o ambiente renderizado (DOM do app). */
-export interface SimulationEnvironment {
+/** Uma instância renderizada do app (um "slot") onde um agente navega. */
+export interface AppSlot {
   getRoot(): HTMLElement | null;
   /** Deve aplicar a ação e renderizar de forma síncrona (flushSync). */
   dispatch(action: AgentAction | { actionId: "__reset" }): void;
+}
+
+export interface SimulationHooks {
   shouldStop(): boolean;
-  onDecision?(event: { agentIndex: number; persona: Persona; tree: AccessibilityTree; response: NavigatorResponse; target?: A11yActionNode }): void;
-  onAgentStart?(agentIndex: number, persona: Persona): void;
-  onAgentEnd?(run: AgentRun): void;
+  onAgentStart?(slot: number, agentIndex: number, persona: Persona): void;
+  onDecision?(event: {
+    slot: number;
+    agentIndex: number;
+    persona: Persona;
+    tree: AccessibilityTree;
+    response: NavigatorResponse;
+    target?: A11yActionNode;
+  }): void;
+  onAgentEnd?(slot: number, run: AgentRun): void;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -36,30 +46,34 @@ async function askNavigator(req: NavigatorRequest): Promise<NavigatorResponse> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
   });
-  if (!res.ok) throw new Error(`Navigator ${res.status}: ${await res.text()}`);
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `Navigator HTTP ${res.status}`);
+  return data;
 }
 
-export async function runAgent(
+async function runAgent(
+  slotIndex: number,
+  slot: AppSlot,
   agentIndex: number,
   persona: Persona,
   config: SimulationConfig,
-  env: SimulationEnvironment,
-  screens: SimulationRun["screens"],
+  hooks: SimulationHooks,
+  run: SimulationRun,
 ): Promise<AgentRun> {
   const flow = FLOWS[config.flowId];
   const seed = hashSeed(config.base.seed, agentIndex, 0xa11ce);
   const steps: StepLog[] = [];
   let outcome: AgentOutcome = "timeout";
   let exitScreen: string = flow.startScreen;
+  let errorMessage: string | undefined;
 
-  env.dispatch({ actionId: "__reset" });
+  slot.dispatch({ actionId: "__reset" });
   await nextFrame();
-  env.onAgentStart?.(agentIndex, persona);
+  hooks.onAgentStart?.(slotIndex, agentIndex, persona);
 
   for (let step = 0; step < flow.maxSteps; step++) {
-    if (env.shouldStop()) break;
-    const root = env.getRoot();
+    if (hooks.shouldStop()) break;
+    const root = slot.getRoot();
     if (!root) {
       outcome = "error";
       break;
@@ -83,15 +97,22 @@ export async function runAgent(
         mockLatencyMs: config.mockLatencyMs,
       });
     } catch (err) {
-      console.error(err);
+      errorMessage = (err as Error).message;
       outcome = "error";
       break;
     }
 
     const { decision, cognitiveLoad } = response;
-    screens[tree.screenId] = { screenId: tree.screenId, title: tree.screenTitle, cognitiveLoad };
+    run.screens[tree.screenId] = { screenId: tree.screenId, title: tree.screenTitle, cognitiveLoad, tree };
+    if (response.usage) {
+      run.llm.usage.inputTokens += response.usage.inputTokens;
+      run.llm.usage.outputTokens += response.usage.outputTokens;
+    }
+    run.llm.mode = response.mode;
+    run.llm.model = response.model ?? run.llm.model;
+
     const target = tree.actions.find((a) => a.id === decision.action_id);
-    env.onDecision?.({ agentIndex, persona, tree, response, target });
+    hooks.onDecision?.({ slot: slotIndex, agentIndex, persona, tree, response, target });
 
     const log: StepLog = {
       step,
@@ -102,7 +123,7 @@ export async function runAgent(
       thinkTimeMs: decision.think_time_ms,
       cognitiveLoad: cognitiveLoad.score,
       errorShown: false,
-      optimal: decision.action_id === response.optimalActionId,
+      optimal: response.acceptableActionIds.includes(decision.action_id),
     };
     steps.push(log);
 
@@ -116,11 +137,11 @@ export async function runAgent(
     if (decision.action_id === SCROLL_DOWN || decision.action_id === SCROLL_UP) {
       applyScroll(root, decision.action_id === SCROLL_DOWN ? "down" : "up");
     } else {
-      env.dispatch({ actionId: decision.action_id, value: decision.value });
+      slot.dispatch({ actionId: decision.action_id, value: decision.value });
     }
     await nextFrame();
 
-    const after = env.getRoot();
+    const after = slot.getRoot();
     if (after) {
       const next = extractAccessibilityTree(after);
       log.errorShown = next.texts.some((t) => t.role === "alert");
@@ -132,23 +153,28 @@ export async function runAgent(
     }
   }
 
-  const run: AgentRun = {
+  const agentRun: AgentRun = {
     agentIndex,
     persona,
     outcome,
     steps,
     totalTimeMs: steps.reduce((s, x) => s + x.thinkTimeMs, 0),
     exitScreen,
+    ...(errorMessage && { errorMessage }),
   };
-  env.onAgentEnd?.(run);
-  return run;
+  hooks.onAgentEnd?.(slotIndex, agentRun);
+  return agentRun;
 }
 
-/** Executa os agentes sequencialmente sobre o mesmo ambiente renderizado. */
+/**
+ * Executa os agentes em paralelo: cada slot (instância do app) consome a
+ * fila de personas até esvaziá-la.
+ */
 export async function runSimulation(
   config: SimulationConfig,
   personas: Persona[],
-  env: SimulationEnvironment,
+  slots: AppSlot[],
+  hooks: SimulationHooks,
 ): Promise<SimulationRun> {
   const run: SimulationRun = {
     id: `sim-${Date.now().toString(36)}`,
@@ -158,12 +184,19 @@ export async function runSimulation(
     screens: {},
     sampleComposition: countBy(personas, (p) => p.demographics.profession),
     ageComposition: countBy(personas, (p) => p.demographics.ageBand),
+    llm: { mode: "mock", model: null, usage: { inputTokens: 0, outputTokens: 0 } },
   };
 
-  for (let i = 0; i < personas.length; i++) {
-    if (env.shouldStop()) break;
-    run.agents.push(await runAgent(i, personas[i], config, env, run.screens));
-  }
+  let next = 0;
+  const worker = async (slotIndex: number) => {
+    while (next < personas.length && !hooks.shouldStop()) {
+      const agentIndex = next++;
+      run.agents.push(await runAgent(slotIndex, slots[slotIndex], agentIndex, personas[agentIndex], config, hooks, run));
+    }
+  };
+  await Promise.all(slots.map((_, i) => worker(i)));
+
+  run.agents.sort((a, b) => a.agentIndex - b.agentIndex);
   run.finishedAt = Date.now();
   return run;
 }

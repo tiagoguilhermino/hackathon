@@ -75,3 +75,29 @@ export function optimalAction(flowId: FlowId, tree: AccessibilityTree, persona: 
       return tree.screenId.startsWith("loan") ? { actionId: "back" } : null;
   }
 }
+
+/**
+ * Conjunto de ações que fazem progresso real no fluxo (há mais de um caminho
+ * válido, ex.: preencher valor antes ou depois das parcelas). Usado para medir
+ * ações sub-ótimas sem penalizar ordens alternativas corretas.
+ */
+export function acceptableActionIds(flowId: FlowId, tree: AccessibilityTree, preferred: AgentAction | null): string[] {
+  const ids = new Set<string>(preferred ? [preferred.actionId] : []);
+  const node = (id: string) => tree.actions.find((a) => a.id === id);
+  const visible = (id: string) => node(id)?.inViewport ?? false;
+
+  if (flowId === "emprestimo" && tree.screenId === "home") {
+    for (const id of ["home-loan", "home-offer-loan"]) if (visible(id)) ids.add(id);
+  }
+  if (tree.screenId === "loan-1") {
+    const hasInstallment = tree.actions.some((a) => a.id.startsWith("loan-installments-") && a.checked);
+    if (!node("loan-amount")?.value) ids.add("loan-amount");
+    if (!hasInstallment) tree.actions.filter((a) => a.id.startsWith("loan-installments-")).forEach((a) => ids.add(a.id));
+  }
+  if (tree.screenId === "pix") {
+    if ((node("pix-key")?.value ?? "").trim().length < 5) ids.add("pix-key");
+    if (!node("pix-amount")?.value) ids.add("pix-amount");
+  }
+  if (flowId === "pix" && tree.screenId === "home" && visible("nav-pix")) ids.add("nav-pix");
+  return [...ids];
+}

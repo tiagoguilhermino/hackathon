@@ -13,13 +13,14 @@ export const SCROLL_UP = "scroll-up";
 
 const clean = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
 
-function relativeBounds(el: Element, origin: DOMRect): Bounds {
+/** Posição relativa ao app, em px de layout (neutraliza o `transform: scale` dos slots do Laboratório). */
+function relativeBounds(el: Element, origin: DOMRect, scale: number): Bounds {
   const r = el.getBoundingClientRect();
   return {
-    x: Math.round(r.left - origin.left),
-    y: Math.round(r.top - origin.top),
-    width: Math.round(r.width),
-    height: Math.round(r.height),
+    x: Math.round((r.left - origin.left) / scale),
+    y: Math.round((r.top - origin.top) / scale),
+    width: Math.round(r.width / scale),
+    height: Math.round(r.height / scale),
   };
 }
 
@@ -39,6 +40,7 @@ function isInViewport(el: Element, appRect: DOMRect): boolean {
  */
 export function extractAccessibilityTree(root: HTMLElement): AccessibilityTree {
   const appRect = root.getBoundingClientRect();
+  const scale = root.offsetWidth ? appRect.width / root.offsetWidth : 1;
   const screen = root.querySelector<HTMLElement>("[data-screen-id]");
   const scroller = screen?.querySelector<HTMLElement>("[data-scroll-container]") ?? null;
 
@@ -58,7 +60,7 @@ export function extractAccessibilityTree(root: HTMLElement): AccessibilityTree {
       id: el.dataset.actionId!,
       role,
       label: clean(el.getAttribute("aria-label") || el.innerText || el.textContent),
-      bounds: relativeBounds(el, appRect),
+      bounds: relativeBounds(el, appRect, scale),
       inViewport: isInViewport(el, appRect),
       prominence: (el.dataset.prominence ?? "normal") as Prominence,
       disabled: el.hasAttribute("disabled"),
@@ -82,7 +84,7 @@ export function extractAccessibilityTree(root: HTMLElement): AccessibilityTree {
     id,
     role: "scroll",
     label,
-    bounds: { x: 0, y: 0, width: Math.round(appRect.width), height: Math.round(appRect.height) },
+    bounds: { x: 0, y: 0, width: root.offsetWidth, height: root.offsetHeight },
     inViewport: true,
     prominence: "normal",
     disabled: false,
@@ -94,8 +96,8 @@ export function extractAccessibilityTree(root: HTMLElement): AccessibilityTree {
     screenId: screen?.dataset.screenId ?? "unknown",
     screenTitle: screen?.dataset.screenTitle ?? "",
     viewport: {
-      width: Math.round(appRect.width),
-      height: Math.round(appRect.height),
+      width: root.offsetWidth,
+      height: root.offsetHeight,
       scrollTop: Math.round(scrollTop),
       scrollHeight: Math.round(scrollHeight),
     },

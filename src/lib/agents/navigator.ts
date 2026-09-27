@@ -10,29 +10,35 @@ import {
 import { analyzeCognitiveLoad } from "../a11y/cognitive-load";
 import { SCROLL_DOWN, SCROLL_UP } from "../a11y/extract";
 import { FLOWS } from "../bank/flows";
-import { optimalAction } from "../bank/oracle";
+import { acceptableActionIds, optimalAction } from "../bank/oracle";
 import { PROFESSION_LABELS, literacyBand } from "../personas/config";
 import { clamp, createRng, hashSeed, logNormal, pick, type Rng } from "../random";
-import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, parseJsonResponse, simulateLatency, type LlmPrompt } from "../llm/client";
+import * as z from "zod/v4";
+import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, simulateLatency, type LlmPrompt } from "../llm/client";
 
 // ---------------------------------------------------------------------------
 // Prompt
 // ---------------------------------------------------------------------------
 
-const NAVIGATOR_SYSTEM = `Você é um agente de simulação de usabilidade. Você NÃO é um assistente: você interpreta um cliente real do Itaú navegando no aplicativo do banco pelo celular.
+const NAVIGATOR_SYSTEM = `Você está participando de um teste de usabilidade simulado de um aplicativo bancário. Seu papel é interpretar, de forma fiel e realista, UM cliente específico (a persona descrita pelo usuário) usando o app do Itaú no celular pela primeira vez. Você não é um assistente e não conhece este app: você só sabe o que aparece na tela.
 
-Modelo: a navegação é um Processo de Decisão de Markov. O estado s é a Árvore de Acessibilidade da tela atual; as ações A são os elementos com "id". Você amostra a próxima ação a ~ π(a|s) de acordo com o perfil da persona — não de acordo com o que seria ótimo.
+A cada passo você recebe o estado da tela como uma árvore de acessibilidade: "textos" é o que está escrito ("# " = título, "[ERRO]" = mensagem de erro, "[abaixo da dobra]" = fora da área visível) e "acoes" são os elementos que a pessoa pode tocar (identificados por "id"). Você escolhe UMA ação — exatamente o que essa pessoa faria agora — ou "ABANDONAR" se ela desistiria do objetivo.
 
-Regras de comportamento (obrigatórias):
-1. Aja estritamente com o conhecimento, a paciência e a habilidade digital da persona.
-2. Literacia digital baixa (< 0.4) + carga cognitiva alta da tela ⇒ a persona lê devagar, não entende jargões (CET, IOF, Selic, amortização, CCB…), tende a não perceber elementos de baixo destaque ("prominence": "low") ou fora da área visível ("inViewport": false) e pode tocar no lugar errado, voltar ou ABANDONAR.
-3. Elementos com "inViewport": false só podem ser usados após "scroll-down". Personas com baixa literacia frequentemente não sabem que precisam rolar.
-4. Mensagens de erro ("role": "alert") e repetição de telas aumentam a frustração e a chance de abandono, proporcionalmente à taxa de rejeição da persona.
-5. "think_time_ms" é o tempo humano simulado para ler a tela e decidir: aumente-o com a quantidade de texto, jargões, idade avançada e baixa literacia.
-6. Para inputs, forneça "value" como a persona digitaria (ela pode digitar em formato inválido).
+O valor deste teste está em revelar onde pessoas reais têm dificuldade. Um agente que sempre acerta o caminho é inútil para o estudo. Portanto, simule a persona, não a resposta correta:
+- Leia a tela como ela leria. Se ela não entende um termo (CET, IOF, Selic, amortização, prestamista, CCB…), ela não entende — pode hesitar, tocar em algo para "ver o que é", voltar ou desistir por insegurança.
+- "rolagem" diz onde a pessoa está na página. Ações com "visivel": false estão fora da área visível e a pessoa não as vê. Ela só os alcança com "scroll-down", e só se imaginar que há mais conteúdo. Pessoas com pouca familiaridade digital muitas vezes não rolam.
+- Ações com "destaque": "baixo" são apagadas/de baixo contraste. Isso as torna mais difíceis de perceber, não invisíveis: quem enxerga pior ou tem pouca prática pode demorar a notá-las ou achar que estão desabilitadas, mas quem procura com atenção acaba encontrando.
+- Textos marcados com [ERRO] são mensagens de erro. Erros repetidos e voltas em círculo aumentam a frustração; pessoas impacientes (taxa de rejeição alta) desistem mais cedo.
+- Pessoas reais não repetem a mesma ação indefinidamente. Se o histórico mostra que ela já tentou algo várias vezes sem progresso (ex.: rolar para cima e para baixo), ela tenta algo diferente (tocar no que parece mais provável, voltar) ou desiste — escolha o que for mais coerente com a paciência dela.
+- Pessoas com alta literacia digital navegam com rapidez e confiança, mas também podem desistir se algo parecer arriscado ou confuso.
+- Em campos de texto, escreva o que a pessoa digitaria de fato, inclusive formatos que o app pode não aceitar (ex.: "5 mil").
 
-Responda SOMENTE com JSON:
-{"action_id": "<id de uma ação existente> | ABANDONAR", "value": "<texto, só para inputs>", "reasoning": "<1-2 frases em 1ª pessoa, na voz da persona>", "think_time_ms": <inteiro>, "confidence": <0..1>}`;
+Campos da resposta:
+- action_id: um "id" existente na lista de ações, ou "ABANDONAR".
+- value: o texto digitado, somente se a ação for um campo de entrada; caso contrário, string vazia.
+- reasoning: 1 a 2 frases em primeira pessoa, na voz e no vocabulário da persona, explicando a escolha. Descreva o que ela percebe ("não achei o botão", "não sei o que é isso"), nunca os metadados da árvore ("contraste", "destaque", "visível", "dobra").
+- think_time_ms: tempo realista (ms) que essa pessoa levaria para ler a tela e agir. Referência: 2.000–5.000 para uma tela simples e alguém fluente; 15.000–60.000 ou mais para textos longos, jargão, idosos ou baixa literacia.
+- confidence: de 0 a 1, o quão segura a pessoa está de que essa ação a aproxima do objetivo.`;
 
 function describePersona(p: Persona): string {
   const d = p.demographics;
@@ -45,30 +51,40 @@ function describePersona(p: Persona): string {
   ].join("\n");
 }
 
+/**
+ * Serialização enxuta da árvore (economiza tokens): textos como strings com
+ * marcadores, ações só com os campos relevantes para a decisão.
+ */
 function compactTree(tree: AccessibilityTree) {
+  const { scrollTop } = tree.viewport;
   return {
-    screenId: tree.screenId,
-    title: tree.screenTitle,
-    canScrollDown: tree.canScrollDown,
-    texts: tree.texts.map((t) => ({ role: t.role, text: t.text, inViewport: t.inViewport })),
-    actions: tree.actions.map((a) => ({
+    tela: tree.screenTitle,
+    rolagem: !tree.canScrollDown && scrollTop < 5 ? "tela inteira visível" : !tree.canScrollDown ? "no fim da tela" : scrollTop < 5 ? "no topo" : "no meio",
+    textos: tree.texts.map(
+      (t) => `${t.role === "alert" ? "[ERRO] " : t.role === "heading" ? "# " : ""}${t.inViewport ? "" : "[abaixo da dobra] "}${t.text}`,
+    ),
+    acoes: tree.actions.map((a) => ({
       id: a.id,
-      role: a.role,
-      label: a.label,
-      ...(a.value !== undefined && { value: a.value }),
-      ...(a.checked !== undefined && { checked: a.checked }),
-      inViewport: a.inViewport,
-      prominence: a.prominence,
-      y: a.bounds.y,
+      tipo: a.role,
+      rotulo: a.label,
+      ...(a.value !== undefined && { valor: a.value }),
+      ...(a.checked !== undefined && { marcado: a.checked }),
+      ...(!a.inViewport && { visivel: false }),
+      ...(a.prominence === "low" && { destaque: "baixo" }),
     })),
   };
 }
 
 export function buildNavigatorPrompt(req: NavigatorRequest, load: CognitiveLoadReport): LlmPrompt {
   const flow = FLOWS[req.flowId];
+  let stepsOnScreen = 0;
+  for (let i = req.history.length - 1; i >= 0 && req.history[i].screenId === req.tree.screenId; i--) stepsOnScreen++;
   const history = req.history
     .slice(-8)
-    .map((h) => `#${h.step} [${h.screenId}] → ${h.actionId}${h.value ? ` "${h.value}"` : ""}${h.errorShown ? " (erro exibido)" : ""}`)
+    .map(
+      (h) =>
+        `${h.step + 1}. [${h.screenId}] ${h.actionId}${h.value ? ` "${h.value}"` : ""}${h.errorShown ? " → apareceu erro" : ""} — "${h.reasoning}"`,
+    )
     .join("\n");
 
   const user = `## Persona
@@ -77,23 +93,23 @@ ${describePersona(req.persona)}
 ## Objetivo
 ${flow.goal}
 
-## Passo ${req.step + 1} de no máximo ${flow.maxSteps}
-Histórico recente:
-${history || "(início da sessão)"}
+## O que você já fez nesta sessão (${req.history.length} ações até agora; ${stepsOnScreen} nesta tela)
+${history || "(acabou de abrir o app)"}
 
-## Carga cognitiva estimada da tela: ${load.score} (${load.level})
-${load.reasons.map((r) => `- ${r}`).join("\n") || "- Sem fatores relevantes."}
-
-## Árvore de acessibilidade (estado s)
+## Tela atual (árvore de acessibilidade)
 ${JSON.stringify(compactTree(req.tree))}
 
-Qual a próxima ação desta persona?`;
+## Observação do laboratório sobre esta tela
+Carga cognitiva estimada: ${load.score} (${load.level}). ${load.reasons.join(" ")}
+
+Qual é a próxima ação de ${req.persona.name.split(" ")[0]}?`;
 
   return { system: NAVIGATOR_SYSTEM, user };
 }
 
 // ---------------------------------------------------------------------------
-// Política mockada π(a|s): ε-greedy em torno do oráculo, com ε enviesado pela persona
+// Política mockada (LLM_MODE=mock): ε-greedy em torno do oráculo, com ε enviesado
+// pela persona. Serve só para testar o pipeline sem custo; não é um agente.
 // ---------------------------------------------------------------------------
 
 const GARBLED_AMOUNTS = ["cinco mil", "R$ 3 mil", "dez mil reais"];
@@ -222,6 +238,18 @@ export function sanitizeDecision(decision: NavigatorDecision, tree: Accessibilit
   };
 }
 
+/** Schema de saída com enum dinâmico: o modelo só pode escolher ações existentes na tela. */
+function decisionSchema(tree: AccessibilityTree) {
+  const ids: [string, ...string[]] = [ABANDON, ...new Set(tree.actions.map((a) => a.id))];
+  return z.object({
+    action_id: z.enum(ids),
+    value: z.string(),
+    reasoning: z.string(),
+    think_time_ms: z.number().int(),
+    confidence: z.number(),
+  });
+}
+
 export async function runNavigator(req: NavigatorRequest): Promise<NavigatorResponse> {
   const cognitiveLoad = analyzeCognitiveLoad(req.tree);
   const prompt = buildNavigatorPrompt(req, cognitiveLoad);
@@ -229,18 +257,27 @@ export async function runNavigator(req: NavigatorRequest): Promise<NavigatorResp
   const mode = getLlmMode();
 
   let decision: NavigatorDecision;
+  let usage: NavigatorResponse["usage"] = null;
+  let model: string | null = null;
   if (mode === "mock") {
     await simulateLatency(req.mockLatencyMs ?? DEFAULT_MOCK_LATENCY_MS);
     decision = mockNavigatorPolicy(req, cognitiveLoad, optimal);
   } else {
-    decision = parseJsonResponse<NavigatorDecision>(await callLLM(prompt));
+    // Muitas chamadas curtas por simulação: esforço baixo mantém latência e custo sob controle.
+    const result = await callLLM({ prompt, schema: decisionSchema(req.tree), schemaName: "navigator_decision", effort: "low", maxTokens: 4000 });
+    decision = { ...result.data, value: result.data.value || undefined };
+    usage = result.usage;
+    model = result.model;
   }
 
   return {
     decision: sanitizeDecision(decision, req.tree),
     cognitiveLoad,
     optimalActionId: optimal?.actionId ?? null,
+    acceptableActionIds: acceptableActionIds(req.flowId, req.tree, optimal),
     prompt,
     mode,
+    model,
+    usage,
   };
 }

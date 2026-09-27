@@ -1,8 +1,10 @@
+import * as z from "zod/v4";
 import type { AnalystReport, DesignProposal, DesignerReport, SimulationStats } from "@/types/analytics";
 import type { ScreenSnapshot } from "@/types/simulation";
 import { JARGON_GLOSSARY } from "../a11y/cognitive-load";
 import { SCREEN_TITLES } from "../bank/flows";
-import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, parseJsonResponse, simulateLatency, type LlmPrompt } from "../llm/client";
+import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
+import { compactJson } from "../llm/compact";
 
 export interface DesignerRequest {
   analyst: AnalystReport;
@@ -12,25 +14,57 @@ export interface DesignerRequest {
 
 const title = (id: string) => SCREEN_TITLES[id as keyof typeof SCREEN_TITLES] ?? id;
 
-const DESIGNER_SYSTEM = `Você é o Agente Designer de UX/UI de um banco. Recebe as anomalias encontradas pelo Agente Analista e o diagnóstico de carga cognitiva de cada tela (jargões, ações escondidas, baixo contraste).
+const DESIGNER_SYSTEM = `Você é o Agente Designer de UX/UI de um banco (identidade visual: laranja #EC7000, azul escuro #1E2A4F). Você recebe o relatório do Agente Analista sobre uma simulação de usabilidade e o conteúdo real de cada tela (textos, botões, destaque visual e se estão visíveis sem rolagem).
 
-Proponha mudanças de interface ACIONÁVEIS e específicas (ex.: "Substituir o jargão 'Taxa Selic' por 'Juros anuais'", "Fixar o botão Continuar no rodapé com contraste AA"). Cada proposta deve:
-- apontar a tela (screenId) e o problema observado, citando a anomalia relacionada;
-- descrever a mudança concreta (texto, componente, posição, cor);
-- justificar com princípios de UX (heurísticas de Nielsen, WCAG, linguagem simples) e com o segmento afetado;
-- estimar impacto e esforço (alta|média|baixa).
-Priorize por impacto no segmento mais prejudicado. Máximo 8 propostas.
+Proponha mudanças de interface ACIONÁVEIS e específicas para os atritos encontrados. Bons exemplos: "Substituir o jargão 'Taxa Selic' por 'Juros anuais'", "Fixar o botão 'Continuar' no rodapé, laranja com texto branco". Cada proposta deve ter:
+- screenId: a tela afetada, exatamente como nos dados;
+- problem: o atrito observado, citando o dado ou a anomalia que o evidencia;
+- change: a mudança concreta (texto novo, componente, posição, cor), usando o conteúdo real da tela;
+- rationale: por que resolve, com base em princípios de UX (heurísticas de Nielsen, WCAG, linguagem simples) e no segmento mais afetado;
+- impact e effort: "alta", "média" ou "baixa";
+- relatedAnomalies: ids das anomalias do Analista que a proposta ataca.
+Regras:
+- Proponha apenas mudanças sustentadas pelos dados recebidos (métricas, anomalias, falas dos agentes ou conteúdo da tela). Não invente problemas que os dados não mostram (ex.: tamanho de fonte) nem proponha algo que a tela já tem.
+- Escreva para o time de produto, em português, sem nomes de campos técnicos dos dados (use "botão pouco destacado", não "prominence low").
+- Priorize pelo impacto no segmento mais prejudicado. No máximo 8 propostas, ids curtos e únicos (ex.: "p1").`;
 
-Responda SOMENTE com JSON: {"proposals": [{"id", "screenId", "problem", "change", "rationale", "impact", "effort", "relatedAnomalies": string[]}]}`;
+const DesignerSchema = z.object({
+  proposals: z.array(
+    z.object({
+      id: z.string(),
+      screenId: z.string(),
+      problem: z.string(),
+      change: z.string(),
+      rationale: z.string(),
+      impact: z.enum(["alta", "média", "baixa"]),
+      effort: z.enum(["alta", "média", "baixa"]),
+      relatedAnomalies: z.array(z.string()),
+    }),
+  ),
+});
 
 export function buildDesignerPrompt(req: DesignerRequest): LlmPrompt {
+  const screens = Object.values(req.screens).map((s) => ({
+    screenId: s.screenId,
+    title: s.title,
+    cognitiveLoad: { score: s.cognitiveLoad.score, reasons: s.cognitiveLoad.reasons },
+    texts: s.tree.texts.map((t) => t.text),
+    actions: s.tree.actions
+      .filter((a) => a.role !== "scroll")
+      .map((a) => ({ id: a.id, label: a.label, prominence: a.prominence, visibleWithoutScroll: a.inViewport })),
+  }));
   return {
     system: DESIGNER_SYSTEM,
-    user: `Relatório do Analista:
+    user: `## Relatório do Analista
 ${req.analyst.summary}
-Anomalias: ${JSON.stringify(req.analyst.anomalies)}
 
-Diagnóstico das telas: ${JSON.stringify(Object.values(req.screens).map((s) => ({ screenId: s.screenId, title: s.title, ...s.cognitiveLoad })))}`,
+Anomalias: ${compactJson(req.analyst.anomalies)}
+
+## Métricas por tela
+${compactJson(req.stats.byScreen)}
+
+## Conteúdo das telas
+${compactJson(screens)}`,
   };
 }
 
@@ -117,12 +151,12 @@ export function mockDesigner(req: DesignerRequest): DesignerReport {
   return { proposals: proposals.slice(0, 8), mode: "mock" };
 }
 
-export async function runDesigner(req: DesignerRequest): Promise<DesignerReport & { prompt: LlmPrompt }> {
+export async function runDesigner(req: DesignerRequest): Promise<DesignerReport & { prompt: LlmPrompt; usage: LlmUsage | null }> {
   const prompt = buildDesignerPrompt(req);
   if (getLlmMode() === "mock") {
     await simulateLatency(DEFAULT_MOCK_LATENCY_MS * 4);
-    return { ...mockDesigner(req), prompt };
+    return { ...mockDesigner(req), prompt, usage: null };
   }
-  const parsed = parseJsonResponse<Omit<DesignerReport, "mode">>(await callLLM(prompt));
-  return { ...parsed, mode: "live", prompt };
+  const { data, usage } = await callLLM({ prompt, schema: DesignerSchema, schemaName: "designer_report", effort: "high" });
+  return { proposals: data.proposals.slice(0, 8), mode: "live", prompt, usage };
 }

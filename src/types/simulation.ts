@@ -61,8 +61,17 @@ export interface NavigatorResponse {
   cognitiveLoad: CognitiveLoadReport;
   /** a* segundo o oráculo do fluxo (null em estados terminais) */
   optimalActionId: string | null;
+  /** Ações que fazem progresso real (caminhos alternativos válidos) */
+  acceptableActionIds: string[];
   prompt: { system: string; user: string };
   mode: "mock" | "live";
+  model: string | null;
+  usage: TokenUsage | null;
+}
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface StepLog {
@@ -90,6 +99,8 @@ export interface AgentRun {
   totalTimeMs: number;
   /** Tela onde o agente abandonou / estourou o limite */
   exitScreen: string;
+  /** Mensagem de falha técnica (outcome = "error") */
+  errorMessage?: string;
 }
 
 export interface SimulationConfig {
@@ -100,12 +111,16 @@ export interface SimulationConfig {
   visualDelayMs: number;
   /** Latência artificial do LLM mockado (ms) */
   mockLatencyMs: number;
+  /** Agentes executados em paralelo (cada um em sua própria instância do app) */
+  concurrency: number;
 }
 
 export interface ScreenSnapshot {
   screenId: string;
   title: string;
   cognitiveLoad: CognitiveLoadReport;
+  /** Última árvore observada (texto real da tela, usado pelo Agente Designer) */
+  tree: AccessibilityTree;
 }
 
 export interface SimulationRun {
@@ -118,6 +133,7 @@ export interface SimulationRun {
   screens: Record<string, ScreenSnapshot>;
   sampleComposition: Partial<Record<Profession, number>>;
   ageComposition: Partial<Record<AgeBand, number>>;
+  llm: { mode: "mock" | "live"; model: string | null; usage: TokenUsage };
 }
 
 export type { AccessibilityTree };

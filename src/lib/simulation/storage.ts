@@ -1,6 +1,6 @@
 import type { SimulationRun } from "@/types/simulation";
 
-const KEY = "itau-ux-lab:runs";
+const KEY = "itau-ux-lab:runs:v2";
 const MAX_RUNS = 5;
 
 export function loadRuns(): SimulationRun[] {

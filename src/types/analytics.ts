@@ -64,6 +64,12 @@ export interface AnalystReport {
   mode: "mock" | "live";
 }
 
+/** Evidência qualitativa extraída dos logs (falas e desvios reais dos agentes). */
+export interface SimulationEvidence {
+  abandonments: { agent: string; screenId: string; reasoning: string; recentSteps: string[] }[];
+  frequentDeviations: { screenId: string; actionId: string; count: number; sampleReasoning: string }[];
+}
+
 export interface DesignProposal {
   id: string;
   screenId: string;

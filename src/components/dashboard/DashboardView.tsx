@@ -6,6 +6,7 @@ import { BarChart3, FlaskConical } from "lucide-react";
 import type { AnalystReport, DesignerReport } from "@/types/analytics";
 import type { SegmentDimension } from "@/types/persona";
 import type { SimulationRun } from "@/types/simulation";
+import { buildEvidence } from "@/lib/analytics/evidence";
 import { DIMENSION_LABELS, computeStats } from "@/lib/analytics/stats";
 import { FLOWS } from "@/lib/bank/flows";
 import { loadRuns } from "@/lib/simulation/storage";
@@ -53,7 +54,11 @@ export function DashboardView() {
     let cancelled = false;
     (async () => {
       try {
-        const analyst = await postJson<AnalystReport>("/api/agents/analyst", { stats, screens: run.screens });
+        const analyst = await postJson<AnalystReport>("/api/agents/analyst", {
+          stats,
+          screens: run.screens,
+          evidence: buildEvidence(run),
+        });
         if (cancelled) return;
         setReports({ runId: run.id, analyst });
         const designer = await postJson<DesignerReport>("/api/agents/designer", { analyst, stats, screens: run.screens });

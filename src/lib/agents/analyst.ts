@@ -1,40 +1,71 @@
-import type { Anomaly, AnalystReport, Severity, SimulationStats } from "@/types/analytics";
+import * as z from "zod/v4";
+import type { Anomaly, AnalystReport, Severity, SimulationEvidence, SimulationStats } from "@/types/analytics";
 import type { ScreenSnapshot } from "@/types/simulation";
 import { FLOWS, SCREEN_TITLES } from "../bank/flows";
 import { DIMENSION_LABELS } from "../analytics/stats";
-import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, parseJsonResponse, simulateLatency, type LlmPrompt } from "../llm/client";
+import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
+import { compactJson } from "../llm/compact";
 
 export interface AnalystRequest {
   stats: SimulationStats;
   screens: Record<string, ScreenSnapshot>;
+  evidence: SimulationEvidence;
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const title = (id: string) => SCREEN_TITLES[id as keyof typeof SCREEN_TITLES] ?? id;
 const SEVERITY_RANK: Record<Severity, number> = { alta: 0, média: 1, baixa: 2 };
 
-const ANALYST_SYSTEM = `Você é o Agente Analista de um laboratório de UX de um banco. Recebe estatísticas agregadas de uma simulação em que agentes-persona (LLM) navegaram por um fluxo do app.
+const ANALYST_SYSTEM = `Você é o Agente Analista de um laboratório de pesquisa de UX de um banco. Agentes de IA, cada um interpretando um cliente sintético com perfil demográfico próprio, navegaram por um fluxo do aplicativo. Você recebe as estatísticas agregadas dessa simulação e evidências qualitativas (o que os agentes "disseram" ao abandonar e os desvios mais frequentes).
 
-Tarefas:
-1. Escreva um sumário interpretativo (3-5 frases) sobre o desempenho do fluxo.
-2. Identifique anomalias: segmentos demográficos com desempenho muito abaixo da média, telas com drop-off ou taxa de erro altos, e correlações com a carga cognitiva das telas. Cite números (ex.: "Idosos 60+ tiveram 70% de taxa de erro na etapa 2").
-3. Não proponha soluções de design — isso é papel de outro agente.
-Ignore segmentos com menos de 3 agentes (amostra insuficiente).
+Sua tarefa é interpretar os dados para o time de produto:
+1. summary: 3 a 5 frases em português sobre o desempenho do fluxo, os principais pontos de atrito e quem é mais afetado. Cite números.
+2. anomalies: os padrões que merecem atenção — segmentos com desempenho muito abaixo da média, telas com drop-off ou taxa de erro altos, relação entre carga cognitiva e abandono, e temas recorrentes nas falas dos agentes. Cada anomalia deve citar a métrica e o valor (ex.: "Idosos 60+ tiveram 70% de ações erradas na etapa 2/3 Condições").
 
-Responda SOMENTE com JSON: {"summary": string, "anomalies": [{"id": string, "severity": "alta"|"média"|"baixa", "screenId"?: string, "segment"?: string, "metric": string, "message": string}]}`;
+Regras:
+- Segmentos com menos de 3 agentes têm amostra insuficiente: só mencione se o efeito for extremo, e deixe isso explícito.
+- Não proponha soluções de design; isso é papel de outro agente.
+- Taxa de erro = proporção de ações que não avançaram o fluxo ou que dispararam alerta.
+- metric deve ser um nome curto em português (ex.: "taxa de erro", "drop-off", "tempo de conclusão"), e as mensagens não devem citar nomes de campos técnicos dos dados.
+- Use screenId exatamente como aparece nos dados (string vazia se a anomalia não for de uma tela), segment no formato "Dimensão: valor" (vazio se não for de um segmento) e ids curtos e únicos (ex.: "a1").`;
+
+const AnalystSchema = z.object({
+  summary: z.string(),
+  anomalies: z.array(
+    z.object({
+      id: z.string(),
+      severity: z.enum(["alta", "média", "baixa"]),
+      screenId: z.string(),
+      segment: z.string(),
+      metric: z.string(),
+      message: z.string(),
+    }),
+  ),
+});
 
 export function buildAnalystPrompt(req: AnalystRequest): LlmPrompt {
   const { stats } = req;
   const screens = Object.values(req.screens).map((s) => ({
     screenId: s.screenId,
+    title: s.title,
     cognitiveLoad: s.cognitiveLoad.score,
     reasons: s.cognitiveLoad.reasons,
   }));
   return {
     system: ANALYST_SYSTEM,
-    user: `Fluxo: ${FLOWS[stats.flowId as keyof typeof FLOWS]?.name ?? stats.flowId}
-Estatísticas: ${JSON.stringify({ ...stats, segmentScreen: stats.segmentScreen.filter((s) => s.actions >= 3) })}
-Carga cognitiva por tela: ${JSON.stringify(screens)}`,
+    user: `Fluxo testado: ${FLOWS[stats.flowId as keyof typeof FLOWS]?.name ?? stats.flowId}
+
+## Estatísticas
+${compactJson({ ...stats, segmentScreen: stats.segmentScreen.filter((s) => s.actions >= 3) })}
+
+## Carga cognitiva por tela
+${compactJson(screens)}
+
+## Falas dos agentes no momento do abandono
+${compactJson(req.evidence.abandonments)}
+
+## Desvios mais frequentes (ações que não avançaram o fluxo)
+${compactJson(req.evidence.frequentDeviations)}`,
   };
 }
 
@@ -124,12 +155,17 @@ export function mockAnalyst(req: AnalystRequest): AnalystReport {
   return { summary, anomalies: anomalies.slice(0, 10), mode: "mock" };
 }
 
-export async function runAnalyst(req: AnalystRequest): Promise<AnalystReport & { prompt: LlmPrompt }> {
+export async function runAnalyst(req: AnalystRequest): Promise<AnalystReport & { prompt: LlmPrompt; usage: LlmUsage | null }> {
   const prompt = buildAnalystPrompt(req);
   if (getLlmMode() === "mock") {
     await simulateLatency(DEFAULT_MOCK_LATENCY_MS * 4);
-    return { ...mockAnalyst(req), prompt };
+    return { ...mockAnalyst(req), prompt, usage: null };
   }
-  const parsed = parseJsonResponse<Omit<AnalystReport, "mode">>(await callLLM(prompt));
-  return { ...parsed, mode: "live", prompt };
+  const { data, usage } = await callLLM({ prompt, schema: AnalystSchema, schemaName: "analyst_report", effort: "high" });
+  const anomalies: Anomaly[] = data.anomalies.map((a) => ({
+    ...a,
+    screenId: a.screenId || undefined,
+    segment: a.segment || undefined,
+  }));
+  return { summary: data.summary, anomalies, mode: "live", prompt, usage };
 }
