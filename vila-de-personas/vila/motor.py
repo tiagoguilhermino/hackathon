@@ -31,7 +31,7 @@ import uuid
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
@@ -454,7 +454,8 @@ def modo_demo() -> bool:
 
 
 def _agora() -> datetime:
-    return datetime.now().astimezone()
+    # Horário de Brasília fixo: o Streamlit Cloud roda em UTC (mesma regra de painel/decisoes.py).
+    return datetime.now(timezone(timedelta(hours=-3), "BRT"))
 
 
 def simular_telas(
@@ -593,7 +594,7 @@ def simular_vila(
 ) -> Simulacao:
     """Contrato com o M2: compara duas versões de tela (antes × depois).
 
-    Com 4 personas e 3 rodadas são 24 chamadas em paralelo. Para comparar B × C,
+    Com 4 personas e 3 rodadas são 24 chamadas (no plano gratuito da Groq, uma de cada vez). Para comparar B × C,
     passe versoes=("B", "C").
     """
     if versoes[0] == versoes[1]:
