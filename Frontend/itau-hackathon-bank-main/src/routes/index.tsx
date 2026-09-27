@@ -51,7 +51,6 @@ import {
   atalhosDaDashboard,
   inicioDaBusca,
   lerBusca,
-  mesmaCombinacao,
   modoLimpo,
   type BuscaLaboratorio,
   type Combinacao,
@@ -126,6 +125,8 @@ const ICONES_DOS_ATALHOS: Record<RotuloAtalho, LucideIcon> = {
   Pix: QrCode,
   Transferir: Send,
   Pagar: ReceiptText,
+  "Pagar boleto": ReceiptText,
+  Fatura: CreditCard,
   "TED/DOC": Send,
   Depositar: ArrowDownLeft,
   Boleto: Barcode,
@@ -182,10 +183,6 @@ function AppLume({
 
   // COMBINAÇÃO ATUAL: AS BARRAS DE TESTE DENTRO DO PIX PODEM TROCAR O FLUXO E A RECORRÊNCIA
   const combinacaoAtual: Combinacao = { ...dashboard, fluxo: pixFlowMode, recorrencia: pixVersion };
-  const cenarioAtual =
-    inicio.cenario && mesmaCombinacao(inicio.cenario.combinacao, combinacaoAtual)
-      ? inicio.cenario
-      : null;
   const [showMenuA, setShowMenuA] = useState(false);
   const [contactSearchQuery, setContactSearchQuery] = useState("");
 
@@ -339,10 +336,8 @@ Status: Aguardando Pagamento
 
   return (
     <main className="min-h-screen bg-canvas pb-28 text-foreground lg:pb-10">
-      {/* LABORATÓRIO DE CENÁRIOS: DASH V1/V2/V3, PEÇAS COMBINÁVEIS E CENÁRIOS (SOME NO MODO LIMPO) */}
-      {!limpo && (
-        <LaboratorioCenarios combinacao={combinacaoAtual} cenario={cenarioAtual} irPara={irPara} />
-      )}
+      {/* LABORATÓRIO DE CENÁRIOS: DASH V1/V2/V3 E PEÇAS COMBINÁVEIS (SOME NO MODO LIMPO) */}
+      {!limpo && <LaboratorioCenarios combinacao={combinacaoAtual} irPara={irPara} />}
 
       {/* HEADER PRINCIPAL */}
       <header className="bg-primary text-primary-foreground">
@@ -472,6 +467,8 @@ Status: Aguardando Pagamento
                     else if (label === "TED/DOC") openTedModal();
                     else if (label === "Transferir") openTransferHubModal();
                     else if (label === "Pagar") setPagar({ tela: "menu" });
+                    else if (label === "Pagar boleto") setPagar({ tela: "codigo" });
+                    else if (label === "Fatura") setPagar({ tela: "fatura" });
                     else if (label === "Empréstimos") setEmprestimosAbertos(true);
                     else setSelectedShortcut(label);
                   }}
@@ -2077,6 +2074,7 @@ Status: Aguardando Pagamento
       {pagar && (
         <FluxoPagar
           inicio={pagar}
+          modo={dashboard.pagar}
           situacaoDasContas={situacaoDasContas}
           valorDaFaturaEmAberto={faturaEmAberto}
           onContaPaga={(contaId, situacao) =>

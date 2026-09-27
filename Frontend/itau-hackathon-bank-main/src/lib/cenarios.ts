@@ -1,8 +1,9 @@
 /**
  * Laboratório de cenários da vila de personas.
  *
- * A dashboard do Lume foi separada em três peças que se combinam: como ficam as transferências,
- * onde fica o boleto e onde ficam "minhas chaves" (receber por Pix). Com o fluxo do Pix e a versão
+ * A dashboard do Lume foi separada em quatro peças que se combinam: como ficam as transferências,
+ * onde fica o boleto, onde ficam "minhas chaves" (receber por Pix) e se "Pagar boleto" e "Fatura"
+ * têm atalhos próprios ou ficam dentro de "Pagar". Com o fluxo do Pix e a versão
  * da recorrência, elas formam uma combinação. As Dash V1, V2 e V3 são combinações prontas.
  * Um cenário é uma tarefa + uma combinação. Tudo aqui é fictício e serve para testar telas.
  *
@@ -12,6 +13,11 @@
 export type ModoTransferencias = "separadas" | "unificadas";
 export type ModoBoleto = "deposito" | "atalho";
 export type ModoChaves = "deposito" | "pix";
+/**
+ * "separadas": atalhos "Pagar boleto" e "Fatura" na tela inicial, sem atalho para as contas a
+ * vencer, que já aparecem em "Próximos pagamentos". "unificadas": um atalho "Pagar" com tudo.
+ */
+export type ModoPagar = "separadas" | "unificadas";
 export type FluxoPix = "fluxo1" | "fluxo2";
 export type VersaoRecorrencia = "A" | "B" | "C";
 
@@ -20,6 +26,7 @@ export type Dashboard = {
   transferencias: ModoTransferencias;
   boleto: ModoBoleto;
   chaves: ModoChaves;
+  pagar: ModoPagar;
 };
 
 /** Uma combinação completa de interface. */
@@ -33,11 +40,11 @@ export type PresetId = "v1" | "v2" | "v3";
 export const IDS_DOS_PRESETS: readonly PresetId[] = ["v1", "v2", "v3"];
 
 export const PRESETS: Record<PresetId, Dashboard> = {
-  v1: { transferencias: "separadas", boleto: "deposito", chaves: "deposito" },
-  v2: { transferencias: "separadas", boleto: "atalho", chaves: "pix" },
+  v1: { transferencias: "separadas", boleto: "deposito", chaves: "deposito", pagar: "unificadas" },
+  v2: { transferencias: "separadas", boleto: "atalho", chaves: "pix", pagar: "unificadas" },
   // Na V3 original, "Depositar" abria uma janela vazia. Aqui ele leva ao boleto e à
   // portabilidade; "minhas chaves" continua dentro do Pix, como antes.
-  v3: { transferencias: "unificadas", boleto: "deposito", chaves: "pix" },
+  v3: { transferencias: "unificadas", boleto: "deposito", chaves: "pix", pagar: "unificadas" },
 };
 
 export const NOMES_DOS_PRESETS: Record<PresetId, string> = {
@@ -53,7 +60,12 @@ export function ehPreset(valor: string): valor is PresetId {
 }
 
 export function mesmaDashboard(a: Dashboard, b: Dashboard): boolean {
-  return a.transferencias === b.transferencias && a.boleto === b.boleto && a.chaves === b.chaves;
+  return (
+    a.transferencias === b.transferencias &&
+    a.boleto === b.boleto &&
+    a.chaves === b.chaves &&
+    a.pagar === b.pagar
+  );
 }
 
 export function mesmaCombinacao(a: Combinacao, b: Combinacao): boolean {
@@ -67,7 +79,15 @@ export function presetDe(dashboard: Dashboard): PresetId | null {
 // --------------------------------------------------------------------------- atalhos
 
 export type RotuloAtalho =
-  "Pix" | "Transferir" | "Pagar" | "TED/DOC" | "Depositar" | "Boleto" | "Empréstimos";
+  | "Pix"
+  | "Transferir"
+  | "Pagar"
+  | "Pagar boleto"
+  | "Fatura"
+  | "TED/DOC"
+  | "Depositar"
+  | "Boleto"
+  | "Empréstimos";
 
 /** No celular a grade tem 4 atalhos por linha; a partir do 5º, eles vão para a 2ª linha. */
 export const ATALHOS_POR_LINHA_NO_CELULAR = 4;
@@ -81,10 +101,12 @@ export function temMenuDepositar(dashboard: Dashboard): boolean {
  * Recarga (retirada a pedido do time). Todos têm função: nenhum fica escondido no celular.
  */
 export function atalhosDaDashboard(dashboard: Dashboard): RotuloAtalho[] {
+  const pagar: RotuloAtalho[] =
+    dashboard.pagar === "separadas" ? ["Pagar boleto", "Fatura"] : ["Pagar"];
   const atalhos: RotuloAtalho[] =
     dashboard.transferencias === "separadas"
-      ? ["Pix", "Pagar", "TED/DOC"]
-      : ["Transferir", "Pagar"];
+      ? ["Pix", ...pagar, "TED/DOC"]
+      : ["Transferir", ...pagar];
   if (temMenuDepositar(dashboard)) atalhos.push("Depositar");
   if (dashboard.boleto === "atalho") atalhos.push("Boleto");
   atalhos.push("Empréstimos");
@@ -135,6 +157,9 @@ export function descreverDashboard(dashboard: Dashboard): string {
     dashboard.transferencias === "separadas" ? "Pix e TED separados" : "Pix e TED em Transferir",
     dashboard.boleto === "atalho" ? "Boleto com atalho próprio" : "Boleto no Depositar",
     dashboard.chaves === "pix" ? "Minhas chaves dentro do Pix" : "Minhas chaves no Depositar",
+    dashboard.pagar === "separadas"
+      ? "Pagar boleto e Fatura separados"
+      : "Boleto e fatura em Pagar",
   ].join(" · ");
   return preset ? `${NOMES_DOS_PRESETS[preset]}: ${partes}` : `Combinação nova: ${partes}`;
 }
@@ -238,9 +263,13 @@ export function caminhoMinimo(tarefa: TarefaId, combinacao: Combinacao): string 
         ? "Boleto → valor → Gerar Boleto"
         : "Depositar → Depositar via Boleto → valor → Gerar Boleto";
     case "T7":
-      return "Pagar → Pagar boleto → Colar código recebido → Continuar → Pagar";
+      return combinacao.pagar === "separadas"
+        ? "Pagar boleto → Colar código recebido → Continuar → Pagar"
+        : "Pagar → Pagar boleto → Colar código recebido → Continuar → Pagar";
     case "T8":
-      return "Pagar → Energia (Contas a vencer) → Pagar (ou, na tela inicial: Próximos pagamentos → Energia)";
+      return combinacao.pagar === "separadas"
+        ? "Próximos pagamentos (tela inicial) → Energia → Pagar"
+        : "Pagar → Energia (Contas a vencer) → Pagar (ou, na tela inicial: Próximos pagamentos → Energia)";
     case "T9": {
       const linha = linhaNoCelular("Empréstimos", combinacao) === 2 ? " (2ª linha no celular)" : "";
       return `Empréstimos${linha} → Empréstimo pessoal → R$ 3.000 → 12x → Simular`;
@@ -252,12 +281,15 @@ export function tipoDoCenario(tarefa: TarefaId, combinacao: Combinacao): TipoDeC
   return tarefa === "T3" && combinacao.fluxo === "fluxo1" ? "incorreto" : "normal";
 }
 
+/** Nas combinações montadas à mão, o Pagar fica como nas Dash V1, V2 e V3: um atalho só. */
 function combinar(
-  base: PresetId | Dashboard,
+  base: PresetId | Omit<Dashboard, "pagar">,
   fluxo: FluxoPix = "fluxo2",
   recorrencia: VersaoRecorrencia = "A",
 ): Combinacao {
-  return { ...(typeof base === "string" ? PRESETS[base] : base), fluxo, recorrencia };
+  const pecas =
+    typeof base === "string" ? PRESETS[base] : { pagar: "unificadas" as const, ...base };
+  return { ...pecas, fluxo, recorrencia };
 }
 
 type Definicao = { tarefa: TarefaId; combinacao: Combinacao; compara: string };
@@ -382,6 +414,7 @@ export function nomeCurtoDaDashboard(dashboard: Dashboard): string {
     dashboard.transferencias === "separadas" ? "Pix e TED separados" : "Transferir",
     dashboard.boleto === "atalho" ? "boleto com atalho" : "boleto no Depositar",
     dashboard.chaves === "pix" ? "chaves no Pix" : "chaves no Depositar",
+    dashboard.pagar === "separadas" ? "boleto e fatura separados" : "boleto e fatura em Pagar",
   ].join(" + ");
 }
 
@@ -408,6 +441,7 @@ export const CHAVES_DA_BUSCA = [
   "transf",
   "boleto",
   "chaves",
+  "pagar",
   "fluxo",
   "rec",
   "limpo",
@@ -447,6 +481,8 @@ export function inicioDaBusca(busca: BuscaLaboratorio): Inicio {
   if (boleto === "deposito" || boleto === "atalho") combinacao = { ...combinacao, boleto };
   const chaves = busca.chaves;
   if (chaves === "deposito" || chaves === "pix") combinacao = { ...combinacao, chaves };
+  const pagar = busca.pagar;
+  if (pagar === "separadas" || pagar === "unificadas") combinacao = { ...combinacao, pagar };
 
   const fluxo = (busca.fluxo ?? "").trim().toLowerCase();
   if (fluxo === "f1" || fluxo === "1" || fluxo === "fluxo1") {
@@ -484,6 +520,7 @@ export function buscaDaCombinacao(
         transf: combinacao.transferencias,
         boleto: combinacao.boleto,
         chaves: combinacao.chaves,
+        pagar: combinacao.pagar,
       };
   return {
     ...dashboard,
