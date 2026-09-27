@@ -64,14 +64,15 @@ function getClient(): Groq {
 
 /**
  * Chave recusada (revogada), limite esgotado mesmo depois das retentativas, ou pedido maior que o
- * saldo de tokens do minuto (413): passa para a próxima chave, se houver, e zera o controle de
- * vazão (o limite é por chave).
+ * saldo de tokens do minuto (413): passa para a próxima chave, em rodízio (depois da última, a
+ * primeira), e zera o controle de vazão (o limite é por chave). `switched` conta as trocas desta
+ * chamada: no máximo uma volta completa, para não girar para sempre se todas estiverem esgotadas.
  */
-function switchKey(err: unknown): boolean {
+function switchKey(err: unknown, switched: number): boolean {
   const keyProblem =
     err instanceof Groq.AuthenticationError || err instanceof Groq.RateLimitError || (err instanceof Groq.APIError && err.status === 413);
-  if (!keyProblem || keyIndex >= API_KEYS.length - 1) return false;
-  keyIndex += 1;
+  if (!keyProblem || switched >= API_KEYS.length - 1) return false;
+  keyIndex = (keyIndex + 1) % API_KEYS.length;
   tpm.limit = 0;
   return true;
 }
@@ -177,6 +178,7 @@ export async function callLLM<S extends z.ZodType>({
 
   // A Groq valida o schema após gerar: se o modelo sair do schema (ex.: uma ação
   // que não existe na tela), devolvemos o erro a ele e pedimos uma nova resposta.
+  let switched = 0;
   for (let attempt = 0; ; attempt++) {
     await acquireTokens(estimateTokens(messages.map((m) => m.content).join(""), effort));
     let completion;
@@ -195,7 +197,8 @@ export async function callLLM<S extends z.ZodType>({
       recordRateLimit(response.headers);
       completion = data;
     } catch (err) {
-      if (switchKey(err)) {
+      if (switchKey(err, switched)) {
+        switched += 1;
         attempt -= 1; // trocar de chave não conta como tentativa de corrigir o schema
         continue;
       }

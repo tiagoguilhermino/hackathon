@@ -67,7 +67,7 @@ As telas `telas/A.png`, `B.png` e `C.png` saíram do frontend atual, e a simula�
 
 ## 4. Segurança
 
-- **27/09: chaves da Groq no código do laboratório.** Por decisão do time, as chaves gratuitas (3) ficam em `itau-ux-lab/src/lib/llm/keys.ts`, porque o repositório é privado. **Antes de deixar o repositório público ou mandar o link do código para a banca, apaguem as chaves desse arquivo e revoguem todas** em console.groq.com (o Guia pede "sem segredos" nos materiais públicos). A chave não aparece no vídeo nem nos prints: só o servidor a usa.
+- **27/09: chaves da Groq no código do laboratório.** Por decisão do time, as chaves gratuitas (7) ficam em `itau-ux-lab/src/lib/llm/keys.ts`, porque o repositório é privado. **Antes de deixar o repositório público ou mandar o link do código para a banca, apaguem as chaves desse arquivo e revoguem todas** em console.groq.com (o Guia pede "sem segredos" nos materiais públicos). A chave não aparece no vídeo nem nos prints: só o servidor a usa.
 
 - **Chave da Groq colada no chat:** ela não foi gravada em nenhum arquivo do repositório. Como passou pelo chat, **revoguem e gerem outra** em console.groq.com depois do hackathon. A nova fica só no `.env`.
 - **Chave do Devin** (item 0.1 do STATUS): confirmem se já foi revogada. Ela continua no histórico do git.

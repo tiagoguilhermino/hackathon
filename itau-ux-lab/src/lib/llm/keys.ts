@@ -3,7 +3,8 @@
  * o repositório é privado e as chaves só servem para o hackathon.
  *
  * O servidor usa a GROQ_API_KEY do .env.local, se houver; senão, estas, na ordem. A próxima
- * entra quando a anterior é recusada (revogada) ou esgota o limite.
+ * entra quando a anterior é recusada (revogada) ou esgota o limite; depois da última, volta à
+ * primeira (o limite por minuto já recarregou), no máximo uma volta por chamada.
  *
  * ANTES de deixar o repositório público ou de mandar o link do código para a banca, apague as
  * chaves daqui e revogue todas em console.groq.com (o Guia pede materiais públicos sem chaves).
@@ -15,4 +16,8 @@ export const PROJECT_GROQ_KEYS: readonly string[] = [
   "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",
   "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",
   "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",
+  "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",
+  "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",
+  "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",
+  "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",
 ];

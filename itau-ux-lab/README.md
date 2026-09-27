@@ -29,7 +29,7 @@ Abra http://localhost:3000.
 No topo do Laboratório há o seletor **Simulado** / **LLM real**.
 
 - **Simulado** (padrão, sem custo): os agentes seguem regras escritas no código (`mockNavigatorPolicy`). Os números refletem essas regras, não pessoas, e o Dashboard avisa isso.
-- **LLM real**: funciona sem configurar nada. As chaves gratuitas da Groq do projeto (3, em 27/09) ficam em `src/lib/llm/keys.ts`, por decisão do time (o repositório é privado). Se uma for recusada ou esgotar o limite, entra a próxima. Um `GROQ_API_KEY` no `.env.local` tem prioridade. O modelo padrão é `openai/gpt-oss-120b` (troque em `LLM_MODEL`).
+- **LLM real**: funciona sem configurar nada. As chaves gratuitas da Groq do projeto (7, em 27/09) ficam em `src/lib/llm/keys.ts`, por decisão do time (o repositório é privado). Se uma for recusada ou esgotar o limite, entra a próxima; depois da última, volta à primeira (no máximo uma volta por chamada). Um `GROQ_API_KEY` no `.env.local` tem prioridade. O modelo padrão é `openai/gpt-oss-120b` (troque em `LLM_MODEL`).
   - **Antes de deixar o repositório público ou mandar o link do código para a banca:** apague as chaves de `keys.ts` e revogue todas em console.groq.com. O Guia pede materiais públicos sem chaves.
   - O plano gratuito limita os tokens por minuto. O código espera o saldo antes de cada chamada, e cada agente gasta cerca de 8 a 12 mil tokens de entrada. Uma simulação com muitos agentes demora, então comece com poucos.
   - Testado em 27/09: 1 agente na versão B (uma vez concluiu, outra concluiu errado) e 2 agentes na versão C (os dois concluíram, em 110 s); Analista e Designer responderam no Dashboard em cerca de 90 s.
