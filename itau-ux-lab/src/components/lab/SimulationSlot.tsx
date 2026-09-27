@@ -1,6 +1,6 @@
 "use client";
 
-import { useImperativeHandle, useReducer, useRef, type Ref } from "react";
+import { useImperativeHandle, useLayoutEffect, useReducer, useRef, type Ref } from "react";
 import { flushSync } from "react-dom";
 import { BankApp } from "@/components/bank/BankApp";
 import { PhoneFrame } from "@/components/bank/PhoneFrame";
@@ -31,10 +31,16 @@ interface SimulationSlotProps {
 export function SimulationSlot({ ref, view, scale, showExport }: SimulationSlotProps) {
   const [state, dispatch] = useReducer(bankReducer, initialBankState);
   const rootRef = useRef<HTMLDivElement>(null);
+  // O runner guarda o handle do início da simulação: o estado vem de um ref sempre atualizado.
+  const stateRef = useRef(state);
+  useLayoutEffect(() => {
+    stateRef.current = state;
+  });
 
   useImperativeHandle(ref, () => ({
     getRoot: () => rootRef.current,
     dispatch: (action) => flushSync(() => dispatch(action)),
+    getState: () => stateRef.current,
   }));
 
   const p = view.persona;

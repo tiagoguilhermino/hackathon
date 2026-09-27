@@ -16,6 +16,8 @@ eggs/
 .eggs/
 lib/
 !Frontend/itau-hackathon-bank-main/src/lib/
+!itau-ux-lab/src/lib/
+!vila-lab/src/lib/
 lib64/
 parts/
 sdist/

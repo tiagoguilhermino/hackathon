@@ -1,7 +1,7 @@
 "use client";
 
 import { AGE_BANDS, type AgeBand, type Persona } from "@/types/persona";
-import type { FlowId, SimulationConfig } from "@/types/simulation";
+import type { FlowId, ScreenVersion, SimulationConfig } from "@/types/simulation";
 import { FLOWS } from "@/lib/bank/flows";
 import { PROFESSION_LABELS } from "@/lib/personas/config";
 import { WeightEditor } from "./WeightEditor";
@@ -62,7 +62,10 @@ export function ConfigPanel({ config, onChange, base, disabled, live }: ConfigPa
           <span className="text-neutral-600">Fluxo a testar</span>
           <select
             value={config.flowId}
-            onChange={(e) => set("flowId", e.target.value as FlowId)}
+            onChange={(e) => {
+              const flowId = e.target.value as FlowId;
+              onChange({ ...config, flowId, version: FLOWS[flowId].versions?.[0].id });
+            }}
             className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5"
           >
             {Object.values(FLOWS).map((f) => (
@@ -72,6 +75,26 @@ export function ConfigPanel({ config, onChange, base, disabled, live }: ConfigPa
             ))}
           </select>
         </label>
+        {FLOWS[config.flowId].versions && (
+          <label className="block text-sm">
+            <span className="text-neutral-600">Versão da tela (antes × depois)</span>
+            <select
+              value={config.version ?? ""}
+              onChange={(e) => set("version", e.target.value as ScreenVersion)}
+              className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5"
+            >
+              {FLOWS[config.flowId].versions!.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-neutral-500">
+              {FLOWS[config.flowId].versions!.find((v) => v.id === config.version)?.description}. Rode uma simulação por versão e
+              compare no Dashboard.
+            </span>
+          </label>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <NumberField label="Agentes" value={config.agentCount} min={1} max={200} onChange={(v) => set("agentCount", v)} />
           <NumberField label="Tamanho da base" value={config.base.size} min={10} max={5000} step={50} onChange={(v) => setBase("size", v)} />

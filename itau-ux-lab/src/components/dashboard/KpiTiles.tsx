@@ -20,7 +20,7 @@ export function KpiTiles({ stats }: { stats: SimulationStats }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <Tile icon={<Users size={14} />} label="Agentes" value={String(stats.totalAgents)} />
-      <Tile icon={<Target size={14} />} label="Taxa de sucesso" value={pct(stats.successRate)} hint={`${pct(stats.abandonRate)} abandono · ${pct(stats.timeoutRate)} limite`} />
+      <Tile icon={<Target size={14} />} label="Taxa de sucesso" value={pct(stats.successRate)} hint={`${stats.wrongRate ? `${pct(stats.wrongRate)} concluiu errado · ` : ""}${pct(stats.abandonRate)} abandono · ${pct(stats.timeoutRate)} limite`} />
       <Tile
         icon={<Clock size={14} />}
         label="Tempo médio de conclusão"

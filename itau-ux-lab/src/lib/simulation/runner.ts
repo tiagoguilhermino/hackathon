@@ -12,15 +12,19 @@ import {
   type StepLog,
 } from "@/types/simulation";
 import { SCROLL_DOWN, SCROLL_UP, applyScroll, extractAccessibilityTree } from "../a11y/extract";
-import { FLOWS } from "../bank/flows";
+import { PROMPT_VERSIONS } from "../agents/versions";
+import { FLOWS, terminalOutcome } from "../bank/flows";
+import type { BankState } from "../bank/state";
 import { countBy } from "../personas/sampling";
 import { hashSeed } from "../random";
 
 /** Uma instância renderizada do app (um "slot") onde um agente navega. */
 export interface AppSlot {
   getRoot(): HTMLElement | null;
-  /** Deve aplicar a ação e renderizar de forma síncrona (flushSync). */
-  dispatch(action: AgentAction | { actionId: "__reset" }): void;
+  /** Deve aplicar a ação e renderizar de forma síncrona (flushSync). "__reset" leva a versão da tela em value. */
+  dispatch(action: AgentAction | { actionId: "__reset"; value?: string }): void;
+  /** Estado atual do app: só o avaliador usa (para saber se a tarefa foi cumprida); o agente só vê a árvore. */
+  getState(): BankState;
 }
 
 export interface SimulationHooks {
@@ -67,7 +71,7 @@ async function runAgent(
   let exitScreen: string = flow.startScreen;
   let errorMessage: string | undefined;
 
-  slot.dispatch({ actionId: "__reset" });
+  slot.dispatch({ actionId: "__reset", value: flow.versions ? config.version : undefined });
   await nextFrame();
   hooks.onAgentStart?.(slotIndex, agentIndex, persona);
 
@@ -80,8 +84,9 @@ async function runAgent(
     }
     const tree = extractAccessibilityTree(root);
     exitScreen = tree.screenId;
-    if (tree.screenId === flow.successScreen) {
-      outcome = "success";
+    const done = terminalOutcome(config.flowId, slot.getState());
+    if (done) {
+      outcome = done;
       break;
     }
 
@@ -147,8 +152,11 @@ async function runAgent(
       const next = extractAccessibilityTree(after);
       log.errorShown = next.texts.some((t) => t.role === "alert");
       exitScreen = next.screenId;
-      if (next.screenId === flow.successScreen) {
-        outcome = "success";
+      const done = terminalOutcome(config.flowId, slot.getState());
+      if (done) {
+        outcome = done;
+        // Terminou sem cumprir: o problema está na tela onde a última ação foi tomada.
+        if (done === "wrong") exitScreen = tree.screenId;
         break;
       }
     }
@@ -185,7 +193,7 @@ export async function runSimulation(
     screens: {},
     sampleComposition: countBy(personas, (p) => p.demographics.profession),
     ageComposition: countBy(personas, (p) => p.demographics.ageBand),
-    llm: { mode: "mock", model: null, usage: { inputTokens: 0, outputTokens: 0 } },
+    llm: { mode: "mock", model: null, usage: { inputTokens: 0, outputTokens: 0 }, promptVersion: PROMPT_VERSIONS.navigator },
   };
 
   let next = 0;

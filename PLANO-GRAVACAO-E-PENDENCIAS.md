@@ -20,6 +20,8 @@ A especificação "sistema multiagentes para testes de usabilidade" foi implemen
 - `/lab`: base sintética com proporção configurável e agentes navegando no app do banco fictício, com `data-action-id` e árvore de acessibilidade;
 - `/dashboard`: gráficos por segmento, agente analista, agente designer e revisão humana registrada.
 
+**Atualização (27/09, manhã):** o time escolheu o app do Victor (`victor-llm`, com a IA de verdade) como base do laboratório. Ele foi juntado à vila em `itau-ux-lab/`: banco fictício Lume, Pix que se repete todo mês nas versões A/B/C, comparação antes × depois, decisão humana registrada e `npm run verificar`. Como rodar: [itau-ux-lab/README.md](itau-ux-lab/README.md). O `vila-lab/` fica como referência.
+
 A IA está **simulada** por padrão; a Groq está pronta, mas não foi testada aqui. Como rodar e como adaptar ao frontend novo: `vila-lab/README.md`. A avaliação completa (case, dicas dos mentores e qual motor usar no vídeo) está em [AVALIACAO-E-PLANO-FINAL.md](AVALIACAO-E-PLANO-FINAL.md). **Antes de gravar, decidam o motor do vídeo (seção 5 da avaliação).**
 
 ## 2. O que só vocês podem fazer (em ordem)

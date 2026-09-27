@@ -33,6 +33,13 @@ interface ActionButtonProps {
   className?: string;
   value?: string;
   disabled?: boolean;
+  /**
+   * Botão só com desenho: descreve o que aparece na tela (ex.: "ícone sem texto: três pontinhos").
+   * É o que o agente lê no lugar do aria-label, porque quem enxerga a tela não vê esse texto.
+   */
+  iconOnly?: string;
+  /** Estado ligado/desligado de um botão alternador (aria-pressed) */
+  pressed?: boolean;
 }
 
 export function ActionButton({
@@ -45,6 +52,8 @@ export function ActionButton({
   className,
   value,
   disabled,
+  iconOnly,
+  pressed,
 }: ActionButtonProps) {
   const { dispatch } = useBank();
   return (
@@ -53,7 +62,9 @@ export function ActionButton({
       data-action-id={actionId}
       data-a11y-role={role}
       data-prominence={prominence ?? (variant === "primary" ? "high" : variant === "subtle" ? "low" : "normal")}
+      data-icon-only={iconOnly}
       aria-label={ariaLabel}
+      aria-pressed={pressed}
       disabled={disabled}
       onClick={() => dispatch({ actionId, value })}
       className={cx(

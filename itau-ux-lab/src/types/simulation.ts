@@ -10,11 +10,21 @@ export type ScreenId =
   | "pix"
   | "pix-confirm"
   | "pix-success"
+  | "pix-scheduled"
   | "payments"
   | "cards"
   | "investments";
 
-export type FlowId = "emprestimo" | "pix";
+export type FlowId = "emprestimo" | "pix" | "pix_recorrente";
+
+/** Versão da tela testada (A/B/C da vila de personas). */
+export type ScreenVersion = "A" | "B" | "C";
+
+export interface FlowVersion {
+  id: ScreenVersion;
+  label: string;
+  description: string;
+}
 
 export interface FlowDefinition {
   id: FlowId;
@@ -23,9 +33,13 @@ export interface FlowDefinition {
   goal: string;
   startScreen: ScreenId;
   successScreen: ScreenId;
+  /** Telas finais em que a tarefa NÃO foi cumprida (ex.: Pix enviado sem repetir) */
+  failureScreens?: ScreenId[];
   /** Etapas ordenadas usadas no funil de conversão */
   funnel: ScreenId[];
   maxSteps: number;
+  /** Versões da tela comparadas antes × depois (só nos fluxos da vila) */
+  versions?: FlowVersion[];
 }
 
 /** a ∈ A: interação com a tela */
@@ -90,7 +104,8 @@ export interface StepLog {
   optimal: boolean;
 }
 
-export type AgentOutcome = "success" | "abandoned" | "timeout" | "error";
+/** "wrong": chegou ao fim sem cumprir a tarefa (ex.: enviou o Pix sem deixar repetindo). */
+export type AgentOutcome = "success" | "wrong" | "abandoned" | "timeout" | "error";
 
 export interface AgentRun {
   agentIndex: number;
@@ -115,6 +130,8 @@ export interface SimulationConfig {
   mockLatencyMs: number;
   /** Agentes com LLM real (Groq) ou política simulada por regras */
   llmMode: "mock" | "live";
+  /** Versão da tela testada, quando o fluxo tem versões */
+  version?: ScreenVersion;
   /** Agentes executados em paralelo (cada um em sua própria instância do app) */
   concurrency: number;
 }
@@ -137,7 +154,7 @@ export interface SimulationRun {
   screens: Record<string, ScreenSnapshot>;
   sampleComposition: Partial<Record<Profession, number>>;
   ageComposition: Partial<Record<AgeBand, number>>;
-  llm: { mode: "mock" | "live"; model: string | null; usage: TokenUsage };
+  llm: { mode: "mock" | "live"; model: string | null; usage: TokenUsage; promptVersion?: string };
 }
 
 export type { AccessibilityTree };

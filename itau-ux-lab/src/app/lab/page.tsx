@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, FlaskConical, Play, Smartphone, Square } from "lucide-react";
+import { SimulationBadge } from "@/components/common/PrototypeNotice";
 import { ConfigPanel } from "@/components/lab/ConfigPanel";
 import { DecisionLog, type LogEntry } from "@/components/lab/DecisionLog";
 import { LlmModeToggle } from "@/components/lab/LlmModeToggle";
@@ -35,7 +36,7 @@ interface LlmStatus {
   hasKey: boolean;
 }
 
-const EMPTY_OUTCOMES: Record<AgentOutcome, number> = { success: 0, abandoned: 0, timeout: 0, error: 0 };
+const EMPTY_OUTCOMES: Record<AgentOutcome, number> = { success: 0, wrong: 0, abandoned: 0, timeout: 0, error: 0 };
 const EMPTY_VIEW: SlotView = { persona: null, agentIndex: null, cursor: null };
 const slotScale = (n: number) => (n <= 1 ? 1 : n === 2 ? 0.8 : 0.62);
 
@@ -166,6 +167,7 @@ export default function LabPage() {
       <header className="flex flex-wrap items-center gap-3 border-b bg-itau-navy px-4 py-3 text-white">
         <FlaskConical size={22} className="text-itau-orange" />
         <h1 className="font-semibold">Modo Laboratório · Simulação Multiagente</h1>
+        <SimulationBadge />
         {llm && (
           <LlmModeToggle
             mode={config.llmMode}
@@ -232,10 +234,11 @@ export default function LabPage() {
             <div className="h-2 rounded-full bg-neutral-100">
               <div className="h-2 rounded-full bg-itau-orange transition-all" style={{ width: `${(doneCount / total) * 100}%` }} />
             </div>
-            <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
+            <div className="mt-3 grid grid-cols-5 gap-2 text-center text-xs">
               {(
                 [
                   ["success", "Sucesso", "text-green-700"],
+                  ["wrong", "Concluiu errado", "text-orange-700"],
                   ["abandoned", "Abandono", "text-red-600"],
                   ["timeout", "Limite", "text-amber-600"],
                   ["error", "Erro", "text-neutral-500"],

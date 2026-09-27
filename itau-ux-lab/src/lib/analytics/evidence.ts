@@ -5,13 +5,14 @@ import { PROFESSION_LABELS } from "../personas/config";
 /** Extrai dos logs as falas e desvios reais dos agentes, para os agentes consultivos. */
 export function buildEvidence(run: SimulationRun): SimulationEvidence {
   const abandonments = run.agents
-    .filter((a) => a.outcome === "abandoned")
+    .filter((a): a is typeof a & { outcome: "abandoned" | "wrong" } => a.outcome === "abandoned" || a.outcome === "wrong")
     .slice(0, 30)
     .map((a) => {
       const d = a.persona.demographics;
       const last = a.steps[a.steps.length - 1];
       return {
         agent: `${d.age} anos, ${PROFESSION_LABELS[d.profession]}, literacia ${d.digitalLiteracy}`,
+        outcome: a.outcome,
         screenId: a.exitScreen,
         reasoning: last?.reasoning ?? "",
         recentSteps: a.steps.slice(-5, -1).map((s) => `${s.screenId}: ${s.actionId}${s.errorShown ? " (erro)" : ""}`),

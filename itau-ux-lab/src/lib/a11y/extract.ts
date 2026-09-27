@@ -59,7 +59,8 @@ export function extractAccessibilityTree(root: HTMLElement): AccessibilityTree {
     const node: A11yActionNode = {
       id: el.dataset.actionId!,
       role,
-      label: clean(el.getAttribute("aria-label") || el.innerText || el.textContent),
+      // Botão só com desenho: o agente lê a descrição do desenho, não o aria-label escondido.
+      label: clean(el.dataset.iconOnly || el.getAttribute("aria-label") || el.innerText || el.textContent),
       bounds: relativeBounds(el, appRect, scale),
       inViewport: isInViewport(el, appRect),
       prominence: (el.dataset.prominence ?? "normal") as Prominence,
@@ -70,7 +71,7 @@ export function extractAccessibilityTree(root: HTMLElement): AccessibilityTree {
       node.placeholder = el.placeholder || undefined;
       node.inputMode = (el.inputMode as A11yActionNode["inputMode"]) || "text";
     }
-    const checked = el.getAttribute("aria-checked");
+    const checked = el.getAttribute("aria-checked") ?? el.getAttribute("aria-pressed");
     if (checked !== null) node.checked = checked === "true";
     actions.push(node);
   });

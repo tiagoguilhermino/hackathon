@@ -4,6 +4,8 @@ export interface SegmentStat {
   dimension: SegmentDimension;
   segment: string;
   agents: number;
+  /** Quantos concluíram a tarefa ("concluiu X de N") */
+  successes: number;
   successRate: number;
   abandonRate: number;
   /** Tempo médio (s) entre os que concluíram */
@@ -38,6 +40,8 @@ export interface SimulationStats {
   flowId: string;
   totalAgents: number;
   successRate: number;
+  /** Chegaram ao fim sem cumprir a tarefa (ex.: Pix enviado sem repetir) */
+  wrongRate: number;
   abandonRate: number;
   timeoutRate: number;
   avgCompletionSec: number | null;
@@ -66,7 +70,8 @@ export interface AnalystReport {
 
 /** Evidência qualitativa extraída dos logs (falas e desvios reais dos agentes). */
 export interface SimulationEvidence {
-  abandonments: { agent: string; screenId: string; reasoning: string; recentSteps: string[] }[];
+  /** Quem desistiu ou terminou sem cumprir a tarefa ("wrong"), com a última fala */
+  abandonments: { agent: string; outcome: "abandoned" | "wrong"; screenId: string; reasoning: string; recentSteps: string[] }[];
   frequentDeviations: { screenId: string; actionId: string; count: number; sampleReasoning: string }[];
 }
 
@@ -84,4 +89,20 @@ export interface DesignProposal {
 export interface DesignerReport {
   proposals: DesignProposal[];
   mode: "mock" | "live";
+}
+
+export type DecisionOption = "aprovar_para_teste" | "recusar" | "precisa_de_dados";
+
+/** Revisão humana: o Agente Designer propõe, uma pessoa decide e explica, e fica registrado. */
+export interface HumanDecision {
+  /** ISO, horário de Brasília */
+  at: string;
+  /** Papel, nunca nome */
+  role: "designer" | "PO";
+  runId: string;
+  proposalId: string;
+  /** Texto da mudança proposta, para o registro fazer sentido sozinho */
+  proposal: string;
+  decision: DecisionOption;
+  comment: string;
 }

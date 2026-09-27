@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import type { ScreenStat } from "@/types/analytics";
 import { CHART, pct, tooltipStyle } from "./chartTheme";
 
-/** Funil: agentes que alcançaram cada etapa vs. abandonos ocorridos nela. */
+/** Funil: agentes que alcançaram cada etapa vs. os que pararam nela sem concluir (abandono, limite ou fim errado). */
 export function FunnelChart({ screens, funnel }: { screens: ScreenStat[]; funnel: string[] }) {
   const rows = funnel
     .map((id) => screens.find((s) => s.screenId === id))
@@ -26,12 +26,12 @@ export function FunnelChart({ screens, funnel }: { screens: ScreenStat[]; funnel
           {...tooltipStyle}
           cursor={{ fill: "rgba(30,42,79,0.06)" }}
           formatter={(v, name, item) =>
-            name === "Abandonaram" ? [`${v} (${pct(item.payload.drop)} de drop-off)`, name] : [String(v), name]
+            name === "Não concluíram aqui" ? [`${v} (${pct(item.payload.drop)} de drop-off)`, name] : [String(v), name]
           }
         />
         <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
         <Bar dataKey="reached" name="Alcançaram" fill={CHART.primary} radius={[4, 4, 0, 0]} maxBarSize={40} />
-        <Bar dataKey="abandoned" name="Abandonaram" fill={CHART.critical} radius={[4, 4, 0, 0]} maxBarSize={40} />
+        <Bar dataKey="abandoned" name="Não concluíram aqui" fill={CHART.critical} radius={[4, 4, 0, 0]} maxBarSize={40} />
       </BarChart>
     </ResponsiveContainer>
   );

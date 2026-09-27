@@ -1,6 +1,8 @@
 import { AlertOctagon, AlertTriangle, Info, Lightbulb, Loader2, Microscope, Palette } from "lucide-react";
-import type { AnalystReport, DesignerReport, Severity } from "@/types/analytics";
+import type { AnalystReport, DesignerReport, HumanDecision, Severity } from "@/types/analytics";
 import { SCREEN_TITLES } from "@/lib/bank/flows";
+import { SimulationBadge } from "../common/PrototypeNotice";
+import { HumanReview, type NewDecision } from "./HumanReview";
 
 const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string; label: string }> = {
   alta: { icon: AlertOctagon, className: "bg-red-50 text-red-700 border-red-200", label: "Severidade alta" },
@@ -28,8 +30,12 @@ export function AnalystPanel({ report, error }: { report?: AnalystReport; error?
       <header className="mb-3 flex items-center gap-2">
         <Microscope size={20} className="text-itau-orange" />
         <h2 className="font-semibold">Agente Analista · Insights</h2>
+        <SimulationBadge />
         {report && <ModeBadge mode={report.mode} />}
       </header>
+      <p className="mb-3 text-xs text-neutral-500">
+        Os números vêm dos agentes com clientes sintéticos. Cada achado é uma hipótese para o teste com pessoas, não um fato sobre clientes.
+      </p>
       {error ? (
         <p className="text-sm text-red-700">{error}</p>
       ) : !report ? (
@@ -63,14 +69,28 @@ export function AnalystPanel({ report, error }: { report?: AnalystReport; error?
 
 const LEVEL_DOT: Record<Severity, string> = { alta: "bg-itau-orange", média: "bg-amber-400", baixa: "bg-neutral-300" };
 
-export function DesignerPanel({ report, error, waiting }: { report?: DesignerReport; error?: string; waiting: boolean }) {
+interface DesignerPanelProps {
+  report?: DesignerReport;
+  error?: string;
+  waiting: boolean;
+  /** Revisão humana: sem runId/onDecide, as propostas aparecem sem o formulário de decisão */
+  runId?: string;
+  decisions?: HumanDecision[];
+  onDecide?: (decision: NewDecision) => void;
+}
+
+export function DesignerPanel({ report, error, waiting, runId, decisions = [], onDecide }: DesignerPanelProps) {
   return (
     <section className="rounded-xl bg-white p-5 shadow-sm">
       <header className="mb-3 flex items-center gap-2">
         <Palette size={20} className="text-itau-orange" />
         <h2 className="font-semibold">Agente Designer · Propostas</h2>
+        <SimulationBadge />
         {report && <ModeBadge mode={report.mode} />}
       </header>
+      <p className="mb-3 text-xs text-neutral-500">
+        Cada proposta é uma hipótese. O agente não altera a tela: o designer ou o PO decide em cada uma, e a decisão fica registrada.
+      </p>
       {error ? (
         <p className="text-sm text-red-700">{error}</p>
       ) : !report ? (
@@ -93,6 +113,14 @@ export function DesignerPanel({ report, error, waiting }: { report?: DesignerRep
                   <span className={`h-2 w-2 rounded-full ${LEVEL_DOT[p.effort]}`} /> Esforço {p.effort}
                 </span>
               </div>
+              {runId && onDecide && (
+                <HumanReview
+                  proposal={p}
+                  runId={runId}
+                  onDecide={onDecide}
+                  previous={decisions.findLast((d) => d.runId === runId && d.proposalId === p.id && d.proposal === p.change)}
+                />
+              )}
             </article>
           ))}
           {!report.proposals.length && <p className="text-sm text-neutral-500">Nenhuma mudança necessária.</p>}

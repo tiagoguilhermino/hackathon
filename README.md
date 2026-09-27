@@ -4,6 +4,8 @@
 >
 > **O que falta fazer e como gravar o vídeo:** [PLANO-GRAVACAO-E-PENDENCIAS.md](PLANO-GRAVACAO-E-PENDENCIAS.md).
 >
+> **Laboratório com IA (app do Victor + vila de personas):** [itau-ux-lab/README.md](itau-ux-lab/README.md). Banco fictício Lume, Pix A/B/C, comparação antes × depois e decisão humana registrada.
+>
 > **Onde estamos e o que falta:** [STATUS-E-PASSO-A-PASSO.md](STATUS-E-PASSO-A-PASSO.md) (avaliação das entregas e passo a passo das tarefas restantes, para quem não programa).
 
 Pasta montada seguindo o guia *Como montar seus agentes — passo a passo* (o PDF aqui na raiz). Ela funciona igual no **Claude Code** e no **Antigravity**: mesma constituição, mesmos três agentes (pesquisador, consolidador, revisor), mesmas pastas de dados.

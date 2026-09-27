@@ -27,6 +27,8 @@ Regras:
 - Segmentos com menos de 3 agentes têm amostra insuficiente: só mencione se o efeito for extremo, e deixe isso explícito.
 - Não proponha soluções de design; isso é papel de outro agente.
 - Taxa de erro = proporção de ações que não avançaram o fluxo ou que dispararam alerta.
+- wrongRate e outcome "wrong" = o agente chegou ao fim sem cumprir a tarefa (ex.: enviou o Pix sem deixar repetindo). Conta como falha, não como sucesso.
+- Os clientes são sintéticos e o resultado é uma simulação: escreva os achados como hipóteses para testar com pessoas reais, nunca como fato sobre clientes.
 - metric deve ser um nome curto em português (ex.: "taxa de erro", "drop-off", "tempo de conclusão"), e as mensagens não devem citar nomes de campos técnicos dos dados.
 - Use screenId exatamente como aparece nos dados (string vazia se a anomalia não for de uma tela), segment no formato "Dimensão: valor" (vazio se não for de um segmento) e ids curtos e únicos (ex.: "a1").`;
 
@@ -62,7 +64,7 @@ ${compactJson({ ...stats, segmentScreen: stats.segmentScreen.filter((s) => s.act
 ## Carga cognitiva por tela
 ${compactJson(screens)}
 
-## Falas dos agentes no momento do abandono
+## Falas dos agentes ao desistir ("abandoned") ou ao terminar sem cumprir a tarefa ("wrong")
 ${compactJson(req.evidence.abandonments)}
 
 ## Desvios mais frequentes (ações que não avançaram o fluxo)
@@ -141,7 +143,7 @@ export function mockAnalyst(req: AnalystRequest): AnalystReport {
     .sort((a, b) => a.successRate - b.successRate)[0];
 
   const summary = [
-    `Dos ${stats.totalAgents} agentes simulados, ${pct(stats.successRate)} concluíram o fluxo, ${pct(stats.abandonRate)} abandonaram e ${pct(stats.timeoutRate)} esgotaram o limite de passos.`,
+    `Dos ${stats.totalAgents} agentes simulados, ${pct(stats.successRate)} concluíram a tarefa, ${stats.wrongRate ? `${pct(stats.wrongRate)} chegaram ao fim sem cumpri-la, ` : ""}${pct(stats.abandonRate)} abandonaram e ${pct(stats.timeoutRate)} esgotaram o limite de passos.`,
     stats.avgCompletionSec ? `Quem concluiu levou em média ${stats.avgCompletionSec.toFixed(0)}s (tempo humano simulado) e ${stats.avgSteps.toFixed(1)} passos.` : "",
     worstScreen?.abandoned
       ? `O principal ponto de atrito é "${worstScreen.title}", onde ocorreram ${worstScreen.abandoned} abandonos e ${pct(worstScreen.errorRate)} das ações foram erradas ou sub-ótimas.`

@@ -27,7 +27,8 @@ Proponha mudanças de interface ACIONÁVEIS e específicas para os atritos encon
 Regras:
 - Proponha apenas mudanças sustentadas pelos dados recebidos (métricas, anomalias, falas dos agentes ou conteúdo da tela). Não invente problemas que os dados não mostram (ex.: tamanho de fonte) nem proponha algo que a tela já tem.
 - Escreva para o time de produto, em português, sem nomes de campos técnicos dos dados (use "botão pouco destacado", não "prominence low").
-- Priorize pelo impacto no segmento mais prejudicado. No máximo 8 propostas, ids curtos e únicos (ex.: "p1").`;
+- Priorize pelo impacto no segmento mais prejudicado. No máximo 8 propostas, ids curtos e únicos (ex.: "p1").
+- Os dados vêm de uma simulação com clientes sintéticos: cada proposta é uma hipótese para testar com pessoas, e quem decide se aplica é o designer ou o PO. Não prometa ganho medido.`;
 
 const DesignerSchema = z.object({
   proposals: z.array(
@@ -75,9 +76,13 @@ export function mockDesigner(req: DesignerRequest): DesignerReport {
   const related = (screenId: string) => req.analyst.anomalies.filter((a) => a.screenId === screenId).map((a) => a.id);
   const affectedSegments = [...new Set(req.analyst.anomalies.map((a) => a.segment).filter(Boolean))].slice(0, 2).join(" e ");
 
-  // Telas com anomalias ou carga cognitiva alta, da pior para a melhor.
+  // Botões só com desenho (sem texto visível): o agente os lê como "ícone sem texto: …".
+  const iconOnly = (s: ScreenSnapshot) => s.tree.actions.filter((a) => a.label.startsWith("ícone sem texto"));
+  const stoppedHere = (id: string) => (req.stats.byScreen.find((b) => b.screenId === id)?.abandoned ?? 0) > 0;
+
+  // Telas com anomalias, carga cognitiva alta ou botão só com ícone onde alguém parou, da pior para a melhor.
   const targets = Object.values(req.screens)
-    .filter((s) => related(s.screenId).length || s.cognitiveLoad.score >= 0.4)
+    .filter((s) => related(s.screenId).length || s.cognitiveLoad.score >= 0.4 || (iconOnly(s).length && stoppedHere(s.screenId)))
     .sort((a, b) => b.cognitiveLoad.score - a.cognitiveLoad.score);
 
   for (const screen of targets) {
@@ -100,8 +105,21 @@ export function mockDesigner(req: DesignerRequest): DesignerReport {
       });
     }
 
-    if (load.lowProminenceActions.length || load.hiddenActions.length) {
-      const ids = [...new Set([...load.lowProminenceActions, ...load.hiddenActions])];
+    const icons = iconOnly(screen);
+    if (icons.length) {
+      push({
+        problem: `Em "${title(screen.screenId)}", ${icons.length === 1 ? "uma ação aparece" : `${icons.length} ações aparecem`} só como desenho, sem texto (${icons.map((a) => a.label.replace("ícone sem texto: ", "")).join("; ")}). Quem não reconhece o desenho não sabe o que o botão faz.`,
+        change: "Mostrar a ação com o ícone e um texto curto e visível dizendo o que ela faz, fora de menus escondidos.",
+        rationale: "Heurística de Nielsen #6 (reconhecer em vez de lembrar) e WCAG 2.5.3 (rótulo visível). É uma hipótese: confirme no teste com pessoas.",
+        impact: "alta",
+        effort: "baixa",
+      });
+    }
+
+    const iconIds = new Set(icons.map((a) => a.id));
+    const unclear = [...new Set([...load.lowProminenceActions, ...load.hiddenActions])].filter((id) => !iconIds.has(id));
+    if (unclear.length) {
+      const ids = unclear;
       push({
         problem: `Ações essenciais pouco visíveis: ${ids.join(", ")} (fora da dobra e/ou baixo contraste).`,
         change:
@@ -134,9 +152,9 @@ export function mockDesigner(req: DesignerRequest): DesignerReport {
     }
   }
 
-  // Erros de digitação de valor na etapa 1
+  // Erros de digitação de valor na etapa 1 (só no fluxo de empréstimo: em outro fluxo, é agente perdido)
   const loan1Errors = req.stats.byScreen.find((s) => s.screenId === "loan-1");
-  if (loan1Errors && loan1Errors.errorRate >= 0.2) {
+  if (req.stats.flowId === "emprestimo" && loan1Errors && loan1Errors.errorRate >= 0.2) {
     proposals.push({
       id: `prop-${proposals.length + 1}`,
       screenId: "loan-1",

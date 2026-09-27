@@ -3,6 +3,11 @@ import type { Persona } from "@/types/persona";
 import type { AgentAction, FlowId } from "@/types/simulation";
 import { SCROLL_DOWN } from "../a11y/extract";
 import { clamp, type Rng, uniform } from "../random";
+import { parseCurrency, pixRecipient } from "./state";
+
+/** Valor e destinatário pedidos na tarefa da vila (fluxo pix_recorrente). */
+const TASK_AMOUNT = 250;
+const TASK_KEY = "(11) 98765-4321";
 
 /**
  * Oráculo do MDP: a ação ótima a* para (fluxo, estado). Serve de referência
@@ -56,6 +61,29 @@ export function optimalAction(flowId: FlowId, tree: AccessibilityTree, persona: 
     }
   }
 
+  if (flowId === "pix_recorrente") {
+    switch (tree.screenId) {
+      case "home":
+        return reach(node("home-pix"));
+      case "pix": {
+        const key = node("pix-key");
+        if (key && pixRecipient(key.value ?? "")?.id !== "ana") return reach(node("pix-contact-ana")) ?? { actionId: "pix-key", value: TASK_KEY };
+        const amount = node("pix-amount");
+        if (amount && parseCurrency(amount.value ?? "") !== TASK_AMOUNT) return { actionId: "pix-amount", value: String(TASK_AMOUNT) };
+        return reach(node("pix-continue"));
+      }
+      case "pix-confirm": {
+        // A: "Repetir" só aparece depois de abrir Mais opções; B e C: está na tela.
+        const repeat = node("pix-repeat");
+        if (!repeat) return reach(node("pix-more")) ?? { actionId: "back" };
+        if (!repeat.checked) return reach(repeat);
+        return reach(node("pix-confirm"));
+      }
+      default:
+        return tree.screenId.startsWith("loan") ? { actionId: "back" } : null;
+    }
+  }
+
   // Fluxo Pix
   switch (tree.screenId) {
     case "home":
@@ -98,6 +126,14 @@ export function acceptableActionIds(flowId: FlowId, tree: AccessibilityTree, pre
     if ((node("pix-key")?.value ?? "").trim().length < 5) ids.add("pix-key");
     if (!node("pix-amount")?.value) ids.add("pix-amount");
   }
-  if (flowId === "pix" && tree.screenId === "home" && visible("nav-pix")) ids.add("nav-pix");
+  if (flowId === "pix_recorrente" && tree.screenId === "pix") {
+    // Escolher a Ana na lista ou digitar a chave dela: os dois caminhos valem.
+    if (pixRecipient(node("pix-key")?.value ?? "")?.id !== "ana") {
+      ids.add("pix-key");
+      if (visible("pix-contact-ana")) ids.add("pix-contact-ana");
+    }
+    if (parseCurrency(node("pix-amount")?.value ?? "") !== TASK_AMOUNT) ids.add("pix-amount");
+  }
+  if ((flowId === "pix" || flowId === "pix_recorrente") && tree.screenId === "home" && visible("nav-pix")) ids.add("nav-pix");
   return [...ids];
 }

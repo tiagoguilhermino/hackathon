@@ -1,4 +1,4 @@
-/** Tokens de cor dos gráficos (marca Itaú + status reservado para abandono). */
+/** Tokens de cor dos gráficos (cores do banco fictício Lume + status reservado para abandono). */
 export const CHART = {
   primary: "#1E2A4F",
   accent: "#EC7000",

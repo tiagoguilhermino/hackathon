@@ -6,7 +6,7 @@ import type { AgentAction } from "@/types/simulation";
 import { BankContext } from "./BankContext";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LoanStep1, LoanStep2, LoanStep3, LoanSuccess } from "./screens/LoanScreens";
-import { PixConfirm, PixScreen, PixSuccess } from "./screens/PixScreens";
+import { PixConfirm, PixScheduled, PixScreen, PixSuccess } from "./screens/PixScreens";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 
 interface BankAppProps {
@@ -33,6 +33,8 @@ function CurrentScreen({ screen }: { screen: BankState["screen"] }) {
       return <PixConfirm />;
     case "pix-success":
       return <PixSuccess />;
+    case "pix-scheduled":
+      return <PixScheduled />;
     default:
       return <PlaceholderScreen screenId={screen} />;
   }

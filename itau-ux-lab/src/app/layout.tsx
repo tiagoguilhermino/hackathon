@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PrototypeNotice } from "@/components/common/PrototypeNotice";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Itaú UX Lab",
-  description: "Testes de usabilidade automatizados com agentes LLM (MDP)",
+  title: "Vila de Personas · Laboratório",
+  description: "Protótipo de hackathon: agentes de IA com perfis sintéticos testam telas de um banco fictício (Lume) antes do teste com pessoas.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -23,7 +24,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <PrototypeNotice />
+        {children}
+      </body>
     </html>
   );
 }

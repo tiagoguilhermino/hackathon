@@ -45,8 +45,8 @@ export function HomeScreen() {
     <header className="bg-itau-orange px-4 pb-6 pt-4 text-white">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-sm font-black text-itau-orange">
-            itaú
+          <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-white px-2 text-sm font-black text-itau-orange">
+            lume
           </span>
           <A11yText role="heading" as="h1" className="text-lg font-semibold">
             Olá, cliente
@@ -55,7 +55,7 @@ export function HomeScreen() {
         <Bell size={22} aria-hidden />
       </div>
       <p className="mt-1 text-xs text-white/80">
-        Ag {ACCOUNT.agency} · Cc {ACCOUNT.account}
+        Banco Lume (fictício) · Ag {ACCOUNT.agency} · Cc {ACCOUNT.account}
       </p>
     </header>
   );
