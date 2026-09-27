@@ -68,7 +68,9 @@ export default function LabPage() {
         } catch {
           /* armazenamento indisponível: usa o padrão */
         }
-        const preferred = stored === "live" || stored === "mock" ? stored : status.hasKey ? "live" : "mock";
+        // Padrão "Simulado": as chaves do projeto estão no código, e o LLM real gasta a cota
+        // gratuita do time. Quem clicar em "LLM real" tem a escolha lembrada neste navegador.
+        const preferred = stored === "live" || stored === "mock" ? stored : "mock";
         setConfig((c) => ({ ...c, llmMode: preferred === "live" && !status.hasKey ? "mock" : preferred }));
       })
       .catch(() => setLlm(null));

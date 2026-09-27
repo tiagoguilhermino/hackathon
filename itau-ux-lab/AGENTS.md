@@ -16,7 +16,7 @@ App Next.js do Victor (branch `victor-llm`) juntado à vila de personas em 27/09
 
 - Valem as regras do produto da seção 03 de `../vila-de-personas/AGENTS.md`: aviso fixo, rótulo SIMULAÇÃO, tudo fictício, a vila não decide, sinal fraco não vira conclusão, prompt não calibrado para acertar, textos em português, números como medidos. Não copie essas regras para cá: mude lá.
 - O nome do Itaú só aparece no aviso fixo (`src/components/common/PrototypeNotice.tsx`). As classes de cor `itau-*` são só nomes internos das cores do Lume; não use o nome em texto de tela, prompt ou dado.
-- Chave da Groq só em `.env.local`, que o git ignora. Agentes não leem `.env.local`.
+- Exceção à regra 1 da vila (chave só no `.env`): por decisão do time (27/09/2026, repositório privado), as chaves gratuitas da Groq ficam em `src/lib/llm/keys.ts`. Só `src/lib/llm/client.ts` (servidor) importa esse arquivo; `npm run verificar` confere que a chave não vai para o navegador. Nunca escreva a chave em outro arquivo, em log, na tela ou no vídeo. Antes de o repositório ficar público: apagar as chaves e revogá-las. Agentes não leem `.env.local`.
 - Mudou o texto de um prompt? Suba a versão em `src/lib/agents/versions.ts` e acrescente a linha na tabela "Versões do prompt" do `README.md`.
 - O agente navegador só vê a árvore de acessibilidade. Estado do app (`getState`) serve só para o avaliador saber se a tarefa foi cumprida.
 - Antes de cada commit: `npm run verificar`, `npm run lint` e `npm run build`, todos sem erro.

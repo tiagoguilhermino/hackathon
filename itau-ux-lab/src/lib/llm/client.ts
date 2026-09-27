@@ -1,13 +1,16 @@
 import Groq from "groq-sdk";
 import * as z from "zod/v4";
+import { PROJECT_GROQ_KEYS } from "./keys";
 
 /**
  * Camada de acesso ao LLM (Groq, via SDK oficial `groq-sdk`).
  *
  * Modo:
- * - `LLM_MODE=live`  → sempre chama a API (exige GROQ_API_KEY)
+ * - `LLM_MODE=live`  → sempre chama a API (exige uma chave)
  * - `LLM_MODE=mock`  → respostas simuladas (setTimeout), sem custo
- * - não definido     → live se houver GROQ_API_KEY, senão mock
+ * - não definido     → live se houver chave, senão mock
+ *
+ * Chave: a GROQ_API_KEY do .env.local, se houver; senão as chaves do projeto (keys.ts).
  */
 export type LlmMode = "mock" | "live";
 
@@ -30,7 +33,14 @@ const STRICT_SCHEMA_MODELS = new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b
 export function getLlmMode(): LlmMode {
   if (process.env.LLM_MODE === "mock") return "mock";
   if (process.env.LLM_MODE === "live") return "live";
-  return process.env.GROQ_API_KEY ? "live" : "mock";
+  return hasApiKey() ? "live" : "mock";
+}
+
+/** Chaves em uso, na ordem de preferência: a do .env.local ou as do projeto. */
+const API_KEYS: readonly string[] = process.env.GROQ_API_KEY ? [process.env.GROQ_API_KEY] : PROJECT_GROQ_KEYS;
+
+export function hasApiKey(): boolean {
+  return API_KEYS.length > 0;
 }
 
 /** Modo efetivo de uma requisição: a escolha do usuário no Laboratório prevalece. */
@@ -44,11 +54,24 @@ export function simulateLatency(ms: number): Promise<void> {
 
 export const DEFAULT_MOCK_LATENCY_MS = Number(process.env.MOCK_LLM_LATENCY_MS ?? 350);
 
-let client: Groq | null = null;
+const clients: (Groq | undefined)[] = [];
+let keyIndex = 0;
 function getClient(): Groq {
   // Retentativas cobrem 429/5xx residuais; o controle de vazão abaixo evita a maioria dos 429.
-  client ??= new Groq({ maxRetries: 6 });
-  return client;
+  clients[keyIndex] ??= new Groq({ apiKey: API_KEYS[keyIndex], maxRetries: 6 });
+  return clients[keyIndex]!;
+}
+
+/**
+ * Chave recusada (revogada) ou limite esgotado mesmo depois das retentativas: passa para a
+ * próxima chave, se houver, e zera o controle de vazão (o limite é por chave).
+ */
+function switchKey(err: unknown): boolean {
+  const keyProblem = err instanceof Groq.AuthenticationError || err instanceof Groq.RateLimitError;
+  if (!keyProblem || keyIndex >= API_KEYS.length - 1) return false;
+  keyIndex += 1;
+  tpm.limit = 0;
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,7 +161,7 @@ export async function callLLM<S extends z.ZodType>({
   effort,
   maxTokens = 8000,
 }: CallOptions<S>): Promise<{ data: z.infer<S>; usage: LlmUsage; model: string }> {
-  if (!process.env.GROQ_API_KEY) throw new LlmError("GROQ_API_KEY não configurada no .env.local.");
+  if (!hasApiKey()) throw new LlmError("Nenhuma chave da Groq: preencha GROQ_API_KEY no .env.local.");
   const jsonSchema = toStrictJsonSchema(schema);
   const strict = STRICT_SCHEMA_MODELS.has(LLM_MODEL);
   const system = strict
@@ -170,13 +193,22 @@ export async function callLLM<S extends z.ZodType>({
       recordRateLimit(response.headers);
       completion = data;
     } catch (err) {
+      if (switchKey(err)) {
+        attempt -= 1; // trocar de chave não conta como tentativa de corrigir o schema
+        continue;
+      }
       if (err instanceof Groq.APIError && err.headers) recordRateLimit(err.headers);
       const body = err instanceof Groq.APIError ? (err.error as { error?: { code?: string; message?: string } } | undefined) : undefined;
       if (body?.error?.code === "json_validate_failed" && attempt < MAX_SCHEMA_RETRIES) {
         messages.push({ role: "user", content: `Sua resposta anterior foi rejeitada: ${body.error.message} Responda novamente respeitando o schema.` });
         continue;
       }
-      if (err instanceof Groq.AuthenticationError) throw new LlmError("GROQ_API_KEY inválida ou ausente.");
+      // Às vezes o modelo escreve o raciocínio em texto solto em vez do JSON: pede de novo.
+      if (body?.error?.code === "output_parse_failed" && attempt < MAX_SCHEMA_RETRIES) {
+        messages.push({ role: "user", content: "Sua resposta anterior não veio no formato pedido. Responda somente com o objeto JSON, sem texto antes ou depois." });
+        continue;
+      }
+      if (err instanceof Groq.AuthenticationError) throw new LlmError("Chave da Groq recusada (inválida ou revogada): confira src/lib/llm/keys.ts ou o .env.local.");
       if (err instanceof Groq.RateLimitError) throw new LlmError(`Limite da Groq atingido: ${err.message}`);
       if (err instanceof Groq.APIError && err.status === 413) throw new LlmError("Prompt maior que o limite de tokens/minuto do plano Groq.");
       if (err instanceof Groq.APIError) throw new LlmError(`Erro da API Groq (${err.status}): ${err.message}`);

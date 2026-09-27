@@ -3,7 +3,7 @@
  * Confere as regras que não dependem da tela (a tela é conferida no navegador).
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { PROMPT_VERSIONS } from "../src/lib/agents/versions";
 import { buildAnalystPrompt, mockAnalyst } from "../src/lib/agents/analyst";
@@ -292,6 +292,28 @@ function agent(index: number, persona: Persona, outcome: AgentRun["outcome"], ex
   const layout = readFileSync(join(__dirname, "..", "src", "app", "layout.tsx"), "utf8");
   check(notice.includes("Protótipo de hackathon") && notice.includes("não é o app oficial do Itaú"), "aviso fixo diz que é protótipo e não é o app oficial");
   check(layout.includes("<PrototypeNotice />"), "aviso fixo está no layout (aparece em toda página)");
+
+  // Chaves da Groq no código (decisão do time): só o servidor pode enxergá-las.
+  const importers = files.filter((f) => /from ["'][^"']*llm\/keys["']|from ["']\.\/keys["']/.test(readFileSync(f, "utf8")));
+  check(importers.length === 1 && importers[0].endsWith(join("llm", "client.ts")), "só o cliente da Groq (servidor) importa as chaves");
+  const serverOnly = /from ["'][^"']*(llm\/client|llm\/keys|agents\/(navigator|analyst|designer))["']/;
+  const leaks = files.filter((f) => readFileSync(f, "utf8").includes('"use client"') && serverOnly.test(readFileSync(f, "utf8")));
+  check(leaks.length === 0, `nenhuma tela ("use client") importa o código que tem a chave${leaks.length ? `: ${leaks.join(", ")}` : ""}`);
+  const keyLines = files.filter((f) => !f.endsWith(join("llm", "keys.ts")) && /gsk_[A-Za-z0-9]{10}/.test(readFileSync(f, "utf8")));
+  check(keyLines.length === 0, `chave escrita só em src/lib/llm/keys.ts${keyLines.length ? `: ${keyLines.join(", ")}` : ""}`);
+  const browserBundle = join(__dirname, "..", ".next", "static");
+  if (existsSync(browserBundle)) {
+    const bundled: string[] = [];
+    const scan = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) scan(path);
+        else if (/\.(js|css|html|json)$/.test(name) && readFileSync(path, "utf8").includes("gsk_")) bundled.push(path);
+      }
+    };
+    scan(browserBundle);
+    check(bundled.length === 0, `o pacote do navegador (.next/static) não tem chave${bundled.length ? `: ${bundled.join(", ")}` : ""}`);
+  }
 }
 
 console.log(failures ? `\n${failures} falha(s).` : "\nTudo certo.");

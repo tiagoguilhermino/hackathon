@@ -43,7 +43,7 @@ export function LlmModeToggle({ mode, onChange, hasKey, model, disabled }: LlmMo
         "live",
         mode === "live" && model ? `LLM real · ${model}` : "LLM real",
         <Bot size={14} />,
-        hasKey ? "Agentes chamam o LLM da Groq" : "Configure GROQ_API_KEY no .env.local para habilitar",
+        hasKey ? "Agentes chamam o LLM da Groq" : "Sem chave da Groq: preencha GROQ_API_KEY no .env.local",
         !hasKey,
       )}
     </div>
