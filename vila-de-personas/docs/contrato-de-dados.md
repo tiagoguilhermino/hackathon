@@ -3,7 +3,7 @@
 | Versão | Status | Quem propôs | De acordo |
 |---|---|---|---|
 | 1.0 | substituída pela 1.1 (o código seguiu outros nomes de campo) | M2, 26/09/2026 (H1) | M1: ☐ · M2: ☑ |
-| 1.1 | **descreve o código atual**, aguardando o de acordo do M1 | Claude, a pedido do M2, 26/09/2026 | M1: ☐ · M2: ☑ |
+| 1.1 | **FECHADO** · descreve o código atual (conferido contra `vila/contrato.py`, `vila/motor.py` e `painel/decisoes.py` pelo Claude, a pedido do M1, 26/09/2026 ~21h30: modelos, campos e `simular_vila` batem) | Claude, a pedido do M2, 26/09/2026 | M1: ☑ · M2: ☑ |
 
 A versão 1.1 foi escrita **a partir do código** (`vila/contrato.py`, `vila/motor.py`, `painel/leitura.py`, `painel/decisoes.py`), não o contrário. Quando o M1 conferir, marque o ☐ e troque o status para **FECHADO**. Mudança depois disso: os dois concordam, a versão sobe e a linha nova entra nesta tabela.
 

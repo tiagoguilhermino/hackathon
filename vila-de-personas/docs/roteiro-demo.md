@@ -1,53 +1,82 @@
-# Roteiro da Demo e Gravação
+# Roteiro da demo e da gravação
 
-## 1. Sequência da demo (75 s)
+Tudo aqui usa o resultado **real** da simulação oficial (`resultados/demo.json`, 26/09/2026 20:37, 36 tentativas, 0 falhas):
 
-| Passo | O que clicar | O que a tela deve mostrar | O que falar | Tempo (s) |
-|---|---|---|---|---|
-| 1. Início | [CONFERIR NO APP] | Tela inicial do painel com o aviso "Protótipo de hackathon". | "Nossa solução ajuda a equipe a testar fluxos com personas de IA para validar opções de tela." | 10 |
-| 2. Escolher telas | [CONFERIR NO APP] para A e B | Preview das telas A e B. | "Vamos comparar a versão atual A com a nova B. Para a demo, carregarei o resultado salvo de uma simulação real." | 10 |
-| 3. Carregar | "Ou carregue um resultado salvo" → `demo.json` → "Carregar resultado salvo" | Aviso "Resultado salvo, não é ao vivo", rótulo SIMULAÇÃO e seletores Antes = A, Depois = B. Mostrar a persona que piorou na B. | "Este é o resultado de uma simulação real, rodada antes. Note que [PERSONA] piorou na versão B e não concluiu a tarefa." | 15 |
-| 4. Decisão | [CONFERIR NO APP] no formulário de decisão | Formulário de decisão preenchido marcando "levar ao teste real" e comentário. | "Como PO, marco 'levar ao teste real' para investigar o porquê com humanos, e salvo." | 15 |
-| 5. Comparar B × C | Seletores: Antes = B, Depois = C | Resultados de B × C (o `demo.json` já tem as três versões). | "Com base nesse ponto, o designer desenhou a versão C. Agora comparamos a B com a C." | 10 |
-| 6. Ler o resultado | [CONFERIR NO APP] | Leitura de cada persona em B × C. | "Na simulação, a C resolveu a trava para [PERSONAS]. É uma hipótese para o teste com pessoas, não uma confirmação." | 10 |
-| 7. Fim | [CONFERIR NO APP] para salvar registro | Confirmação de registro salvo. | "Salvamos a decisão final. Lembrando que isso é uma simulação e não substitui os testes reais." | 5 |
+| Comparação | O que o painel mostra | Leitura |
+|---|---|---|
+| A × B | as 4 personas concluíram 0 de 3 na A **e** 0 de 3 na B | 🟡 sinal fraco para todas (as duas versões escondem a opção) |
+| B × C | 0 de 3 na B, 3 de 3 na C, para as 4 | 🟢 melhorou para todas |
 
-**Tempo total:** 75 segundos.
+Ninguém "piorou" na B. Não diga que piorou: a história é "nem A nem B funcionaram; a C, sim, **na simulação**".
 
-Os nomes e resultados entre colchetes saem da simulação oficial (`resultados/demo.json`, rodada com as telas do M4). Se ela não mostrar ninguém piorando na B ou melhorando na C, a fala muda: não force a história. Um resultado que contraria a ideia também é aprendizado para apresentar.
+## 1. Vídeo narrado (até 2:00, público no YouTube)
 
-## 2. Plano B
+O Guia pede: começar dizendo quem usa e o que quer fazer, percorrer o fluxo principal, mostrar o resultado e terminar com uma limitação ou com o que foi simulado. Alvo: **1:50**, para sobrar folga.
+
+| Tempo | Na tela (quem grava clica) | Narração (quem fala lê) |
+|---|---|---|
+| 0:00–0:15 | Topo do painel, com o aviso "Protótipo de hackathon · resultados simulados · telas fictícias" | "Esta é a Vila de Personas, um protótipo de hackathon. Quem usa é o designer ou o PO de uma squad que mudou a tela de agendar um Pix que se repete todo mês e quer saber, antes do teste com pessoas, onde o cliente pode travar." |
+| 0:15–0:30 | Seção "1 · Entrada": a tarefa, as 4 personas marcadas e as telas A e B lado a lado | "Escolhemos a tarefa, quatro personas de IA, descritas pelo jeito de usar o celular, e duas versões da tela. Na A, 'Repetir' fica escondido em 'Mais opções'. Na B, vira um ícone sem texto." |
+| 0:30–0:45 | Abrir "Ou carregue um resultado salvo" → `demo.json · … · rodou com a IA` → "Carregar resultado salvo". Parar no aviso "Resultado salvo, não é ao vivo" e no rótulo SIMULAÇÃO | "Cada persona tenta três vezes cada versão. Para não esperar os 20 minutos, carregamos a simulação real que rodamos antes com a mesma IA: 36 tentativas." |
+| 0:45–1:05 | Antes = A, Depois = B. Rolar pelas 4 personas: "concluiu 0 de 3" dos dois lados, "Travou em…" e 🟡 Sinal fraco | "Nenhuma persona concluiu em nenhuma das duas versões. Por isso o painel não diz que a B melhorou: é sinal fraco. As duas escondem a opção." |
+| 1:05–1:25 | Seção "3 & 4": marcar **PO**, na Ana escolher "levar ao teste real", escrever o porquê e clicar "Salvar decisões". Mostrar o histórico | "A vila não decide. Como PO, levo esse ponto ao teste com pessoas e explico por quê. A decisão fica registrada: quem decidiu, qual simulação e o que a vila apontou." |
+| 1:25–1:40 | Antes = B, Depois = C: "concluiu 3 de 3" e 🟢 Melhorou para as 4 | "O designer fez a versão C, com ícone e o texto 'Repetir todo mês'. Na simulação, as quatro personas concluíram as três vezes." |
+| 1:40–1:55 | Voltar ao rótulo SIMULAÇÃO (ou abrir "Como ler este resultado") | Com o teste feito: "Isso é simulação, não evidência. No teste com [N] pessoas, a vila acertou [X] dificuldades, deixou passar [Y] e apontou [Z] que as pessoas não tiveram." Sem o teste: "Isso é simulação, não evidência: as quatro personas agiram igual, e o botão da C repete as palavras da tarefa. O próximo passo é conferir com pessoas reais." |
+
+**Regras:** nenhum número que não esteja no `demo.json` ou no `numeros-finais.md`. Nenhuma chave, terminal ou `.env` na tela. Nada de marca do Itaú.
+
+## 2. Demo ao vivo na banca (75 s, dentro do pitch de 4 min)
+
+A mesma sequência, mais curta: pule a entrada (0:15–0:30) e fale só uma frase em cada passo. Deixe o painel aberto com o `demo.json` já carregado e o vídeo numa aba, como contingência.
+
+| Passo | Tempo (s) |
+|---|---|
+| Quem usa e qual tarefa, com o aviso fixo na tela | 10 |
+| Carregar resultado salvo e mostrar o rótulo SIMULAÇÃO | 10 |
+| A × B: 0 de 3 nos dois, sinal fraco | 15 |
+| Decisão do PO salva e o histórico | 15 |
+| B × C: 3 de 3, melhorou | 10 |
+| Limitação e o teste com pessoas | 15 |
+
+## 3. Plano B
 
 | Cenário | O que fazer |
 |---|---|
-| Internet cair | Com o app rodando no notebook, carregar o `demo.json` em "Ou carregue um resultado salvo" (funciona sem internet). Sem o app, usar o vídeo da demo, deixado aberto como contingência. |
-| Erro 429 na API | Abrir "Ou carregue um resultado salvo" e carregar o `demo.json`, sem tentar de novo ao vivo. |
-| O app não abrir | Tentar reiniciar, mas, se demorar, alternar imediatamente para o vídeo da gravação. |
+| Internet cair | Com o app rodando no notebook, carregar o `demo.json` (funciona sem internet). Sem o app, usar o vídeo. |
+| Erro 429 (limite da Groq) | Não tentar de novo ao vivo: carregar o `demo.json`. |
+| Link público "dormindo" | Clicar em "Yes, get this app back up!" e esperar 1 a 2 minutos. Abra o link uns 10 minutos antes da banca. |
+| O app não abrir | Ir direto para o vídeo. |
 
-## 3. Prints para o M4
+## 4. Prints (4 a 6, para os slides)
 
-| Nome do arquivo | Qual tela | O que precisa aparecer |
+Navegador em tela cheia, zoom de 110% a 125%, sem abas, favoritos nem notificações.
+
+| Arquivo | Tela | O que precisa aparecer |
 |---|---|---|
-| `print-01-inicio.png` | Tela inicial de escolha A e B | Aviso de protótipo, telas e personas escolhidas. Zoom 110% a 125%. |
-| `print-02-resultado-ab.png` | Tela de resultados A × B | Rótulo SIMULAÇÃO, resumo antes × depois e piora do Seu Jorge. Zoom 110% a 125%. |
-| `print-03-decisao.png` | Formulário de decisão do PO | A marcação "levar ao teste real" e o comentário preenchidos. Zoom 110% a 125%. |
-| `print-04-resultado-bc.png` | Tela de resultados B × C | Melhoria da tela C e botões para salvar o registro. Zoom 110% a 125%. |
+| `print-01-entrada.png` | Seção 1 · Entrada | aviso fixo, tarefa, personas marcadas e telas A e B lado a lado |
+| `print-02-a-b.png` | Seção 2, Antes = A, Depois = B | rótulo SIMULAÇÃO, "Resultado salvo, não é ao vivo", "concluiu 0 de 3" nos dois lados e 🟡 Sinal fraco |
+| `print-03-decisao.png` | Seção 3 & 4 | PO marcado, "levar ao teste real", o comentário e o histórico com a decisão |
+| `print-04-b-c.png` | Seção 2, Antes = B, Depois = C | "concluiu 3 de 3" e 🟢 Melhorou |
+| `print-05-telas.png` (opcional) | `telas/A.png`, `B.png` e `C.png` lado a lado | as três versões, sem marca do Itaú |
 
-## 4. Gravação
+## 5. Gravação
 
-| Passo | O que fazer |
-|---|---|
-| 1. Gravar | Abrir QuickTime (Arquivo → Nova Gravação de Tela, ativar microfone). |
-| 2. Editar | Importar no iMovie, fazer um corte simples nas pontas para remover pausas e ruídos. |
-| 3. Exportar | Exportar o vídeo na resolução de 1080p. |
-| 4. Publicar | Subir no YouTube, configurar a privacidade como Público. |
-| 5. Testar | Copiar o link do vídeo e abrir em uma janela anônima para validar o acesso. |
+| Passo | Mac | Windows |
+|---|---|---|
+| Gravar | QuickTime → Arquivo → Nova Gravação de Tela, com o microfone ligado | Win+Alt+R (Xbox Game Bar) ou Clipchamp |
+| Editar | iMovie: cortar só o começo e o fim | Clipchamp: cortar só o começo e o fim |
+| Exportar | 1080p | 1080p |
+| Publicar | YouTube → Criar → Enviar vídeo → visibilidade **Público** | igual |
+| Testar | abrir o link numa janela anônima, sem login | igual |
 
-## 5. Checklist antes de publicar
+Título sugerido: "Vila de Personas · protótipo de hackathon (Hackathon Itaú 2026, Case C)".
 
-- [ ] **Tempo:** O vídeo deve ter, no máximo, 2:00 de duração.
-- [ ] **Avisos:** "Protótipo de hackathon · resultados simulados · telas fictícias" está visível na tela inicial.
-- [ ] **Rótulo SIMULAÇÃO:** Fica visível no painel durante a exibição dos resultados.
-- [ ] **Segurança de dados:** `.env`, terminal e console da API fechados. Não há senhas, chaves, e-mails ou dados reais visíveis.
-- [ ] **Marca:** Não aparece nenhuma logo ou marca oficial do Itaú nas telas.
-- [ ] **Fechamento:** O final da fala deixa claro que o que foi visto é simulado (hipótese) e possui limitações.
+## 6. Checklist antes de publicar o vídeo
+
+- [ ] Duração de 2:00 ou menos.
+- [ ] Começa dizendo quem usa e o que quer fazer; termina dizendo o que é simulado.
+- [ ] Aviso "Protótipo de hackathon · resultados simulados · telas fictícias" e rótulo SIMULAÇÃO visíveis.
+- [ ] Nenhuma chave, `.env`, terminal, e-mail ou dado real na tela.
+- [ ] Nenhum nome, logo ou cor do Itaú nas telas mostradas.
+- [ ] Todo número dito está no `demo.json` ou no `numeros-finais.md`.
+- [ ] Vídeo **público**, abrindo numa janela anônima.

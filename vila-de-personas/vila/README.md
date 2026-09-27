@@ -115,7 +115,7 @@ com pessoas.
 | v1 | 26/09/2026 | Primeira versão: persona pelo cartão, olhar só a imagem, passo a passo, pode hesitar e desistir, citar o texto da tela, critério de "concluiu". | Encanamento (offline). |
 | v-final | 26/09/2026, ~20h35 | Texto igual ao v1. Congelado com `qwen/qwen3.8-27b`, esforço `none`, temperatura 0,6 e teto de 1.000 tokens (limites do plano gratuito da Groq). | API real, tela B oficial: Seu Jorge (esforço medium) e Ana (esforço none). Nos dois casos a persona não viu o ícone de repetir e não concluiu. |
 
-**Simulação oficial** (`resultados/sim-20260926-203746-46299b.json`, copiada para `resultados/demo.json`): prompt v-final, telas oficiais A, B e C, 4 personas × 3 rodadas = 36 chamadas, 0 falhas, 1.195 s. Resultado: A e B, 0 de 3 para todas as personas; C, 3 de 3 para todas.
+**Simulação oficial** (`resultados/sim-20260926-203746-46299b.json`, copiada para `resultados/demo.json`): prompt v-final, telas oficiais A, B e C, 4 personas × 3 rodadas = 36 chamadas, 0 falhas, 1.195 s. Resultado: A e B, 0 de 3 para todas as personas; C, 3 de 3 para todas. Tokens (dos metadados): 82.449 de entrada e 13.149 de saída, 95.598 no total, cerca de 2.660 por chamada.
 
 ## Comparação com as pessoas e números finais
 
@@ -125,8 +125,12 @@ com pessoas.
    `duracao_sessao_min`.
 2. `python -m vila.comparacao parear --sim resultados/demo.json`. Abra
    `resultados/pareamento-<sim>.csv`, confira **cada linha**, corrija `classificacao_final` se
-   preciso e escreva `ok` em `conferido`. A opção `--ia` ainda usa a API da Anthropic e não funciona
-   com a configuração da Groq: use a sugestão por regra.
+   preciso e escreva `ok` em `conferido`. A vila escreve o mesmo problema com frases diferentes
+   (na simulação oficial, 13 frases para "não achou onde repetir" nas telas A e B): quando várias
+   linhas da mesma versão falam do mesmo problema, classifique uma e marque as outras como
+   `repetida` em `classificacao_final`. Elas ficam fora da conta, e o resumo diz quantas foram.
+   A opção `--ia` ainda usa a API da Anthropic e está desligada (dá erro claro): use a sugestão
+   por regra.
 3. `python -m vila.comparacao resumo --sim resultados/demo.json` grava `resultados/numeros-finais.md`,
    o texto curto para o WhatsApp do time.
 
