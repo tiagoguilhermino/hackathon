@@ -54,6 +54,8 @@ export interface NavigatorRequest {
   seed: number;
   step: number;
   mockLatencyMs?: number;
+  /** Escolha do Laboratório: LLM real (Groq) ou política simulada */
+  mode?: "mock" | "live";
 }
 
 export interface NavigatorResponse {
@@ -111,6 +113,8 @@ export interface SimulationConfig {
   visualDelayMs: number;
   /** Latência artificial do LLM mockado (ms) */
   mockLatencyMs: number;
+  /** Agentes com LLM real (Groq) ou política simulada por regras */
+  llmMode: "mock" | "live";
   /** Agentes executados em paralelo (cada um em sua própria instância do app) */
   concurrency: number;
 }

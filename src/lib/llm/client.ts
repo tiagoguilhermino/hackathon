@@ -26,10 +26,16 @@ export const LLM_MODEL = process.env.LLM_MODEL ?? "openai/gpt-oss-120b";
 /** Modelos com Structured Outputs estrito (decodificação restrita ao schema) na Groq. */
 const STRICT_SCHEMA_MODELS = new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]);
 
+/** Modo padrão do servidor (usado quando o cliente não escolhe um). */
 export function getLlmMode(): LlmMode {
   if (process.env.LLM_MODE === "mock") return "mock";
   if (process.env.LLM_MODE === "live") return "live";
   return process.env.GROQ_API_KEY ? "live" : "mock";
+}
+
+/** Modo efetivo de uma requisição: a escolha do usuário no Laboratório prevalece. */
+export function resolveLlmMode(requested?: LlmMode): LlmMode {
+  return requested === "mock" || requested === "live" ? requested : getLlmMode();
 }
 
 export function simulateLatency(ms: number): Promise<void> {

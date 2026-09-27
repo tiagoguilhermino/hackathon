@@ -58,10 +58,11 @@ export function DashboardView() {
           stats,
           screens: run.screens,
           evidence: buildEvidence(run),
+          mode: run.config.llmMode,
         });
         if (cancelled) return;
         setReports({ runId: run.id, analyst });
-        const designer = await postJson<DesignerReport>("/api/agents/designer", { analyst, stats, screens: run.screens });
+        const designer = await postJson<DesignerReport>("/api/agents/designer", { analyst, stats, screens: run.screens, mode: run.config.llmMode });
         if (!cancelled) setReports({ runId: run.id, analyst, designer });
       } catch (err) {
         if (!cancelled) setReports({ runId: run.id, error: (err as Error).message });

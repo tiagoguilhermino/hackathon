@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, Bot, FlaskConical, Play, Smartphone, Square } from "lucide-react";
+import { BarChart3, FlaskConical, Play, Smartphone, Square } from "lucide-react";
 import { ConfigPanel } from "@/components/lab/ConfigPanel";
 import { DecisionLog, type LogEntry } from "@/components/lab/DecisionLog";
+import { LlmModeToggle } from "@/components/lab/LlmModeToggle";
 import { SimulationSlot, type SlotView } from "@/components/lab/SimulationSlot";
 import { SCROLL_DOWN, SCROLL_UP } from "@/lib/a11y/extract";
 import { estimateCostUsd } from "@/lib/llm/pricing";
@@ -22,7 +23,10 @@ const DEFAULT_CONFIG: SimulationConfig = {
   visualDelayMs: 150,
   mockLatencyMs: 120,
   concurrency: 3,
+  llmMode: "mock",
 };
+
+const MODE_KEY = "itau-ux-lab:llm-mode";
 
 type Status = "idle" | "running" | "done";
 interface LlmStatus {
@@ -55,9 +59,28 @@ export default function LabPage() {
   useEffect(() => {
     fetch("/api/agents/status")
       .then((r) => r.json())
-      .then(setLlm)
+      .then((status: LlmStatus) => {
+        setLlm(status);
+        let stored: string | null = null;
+        try {
+          stored = localStorage.getItem(MODE_KEY);
+        } catch {
+          /* armazenamento indisponível: usa o padrão */
+        }
+        const preferred = stored === "live" || stored === "mock" ? stored : status.hasKey ? "live" : "mock";
+        setConfig((c) => ({ ...c, llmMode: preferred === "live" && !status.hasKey ? "mock" : preferred }));
+      })
       .catch(() => setLlm(null));
   }, []);
+
+  const changeMode = (llmMode: SimulationConfig["llmMode"]) => {
+    setConfig((c) => ({ ...c, llmMode }));
+    try {
+      localStorage.setItem(MODE_KEY, llmMode);
+    } catch {
+      /* ignora */
+    }
+  };
 
   const updateView = (slot: number, patch: Partial<SlotView>) =>
     setViews((prev) => prev.map((v, i) => (i === slot ? { ...v, ...patch } : v)));
@@ -144,13 +167,13 @@ export default function LabPage() {
         <FlaskConical size={22} className="text-itau-orange" />
         <h1 className="font-semibold">Modo Laboratório · Simulação Multiagente</h1>
         {llm && (
-          <span
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${llm.mode === "live" ? "bg-green-600" : "bg-amber-500 text-itau-navy"}`}
-            title={llm.mode === "live" ? "Os agentes estão chamando o LLM de verdade" : "Sem GROQ_API_KEY: decisões simuladas por regras"}
-          >
-            <Bot size={14} />
-            {llm.mode === "live" ? `LLM real · ${llm.model}` : "Modo mock (sem LLM)"}
-          </span>
+          <LlmModeToggle
+            mode={config.llmMode}
+            onChange={changeMode}
+            hasKey={llm.hasKey}
+            model={llm.model}
+            disabled={status === "running"}
+          />
         )}
         <nav className="ml-auto flex gap-2 text-sm">
           <Link href="/" className="flex items-center gap-1 rounded-md px-3 py-1.5 hover:bg-white/10">
@@ -164,7 +187,7 @@ export default function LabPage() {
 
       <div className="grid gap-4 p-4 xl:grid-cols-[320px_auto_1fr]">
         <aside className="h-fit space-y-4 rounded-xl bg-white p-4 shadow-sm">
-          <ConfigPanel config={config} onChange={setConfig} base={base} disabled={status === "running"} live={llm?.mode === "live"} />
+          <ConfigPanel config={config} onChange={setConfig} base={base} disabled={status === "running"} live={config.llmMode === "live"} />
           {status === "running" ? (
             <button
               type="button"
@@ -224,7 +247,7 @@ export default function LabPage() {
                 </div>
               ))}
             </div>
-            {llm?.mode === "live" && (
+            {config.llmMode === "live" && (
               <p className="mt-3 text-xs tabular-nums text-neutral-500">
                 Tokens: {usage.inputTokens.toLocaleString("pt-BR")} entrada · {usage.outputTokens.toLocaleString("pt-BR")} saída
                 {cost !== null && ` · ≈ US$ ${cost.toFixed(4)}`}

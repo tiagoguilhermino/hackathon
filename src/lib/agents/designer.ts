@@ -3,13 +3,14 @@ import type { AnalystReport, DesignProposal, DesignerReport, SimulationStats } f
 import type { ScreenSnapshot } from "@/types/simulation";
 import { JARGON_GLOSSARY } from "../a11y/cognitive-load";
 import { SCREEN_TITLES } from "../bank/flows";
-import { DEFAULT_MOCK_LATENCY_MS, callLLM, getLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
+import { DEFAULT_MOCK_LATENCY_MS, callLLM, resolveLlmMode, simulateLatency, type LlmPrompt, type LlmUsage } from "../llm/client";
 import { compactJson } from "../llm/compact";
 
 export interface DesignerRequest {
   analyst: AnalystReport;
   stats: SimulationStats;
   screens: Record<string, ScreenSnapshot>;
+  mode?: "mock" | "live";
 }
 
 const title = (id: string) => SCREEN_TITLES[id as keyof typeof SCREEN_TITLES] ?? id;
@@ -153,7 +154,7 @@ export function mockDesigner(req: DesignerRequest): DesignerReport {
 
 export async function runDesigner(req: DesignerRequest): Promise<DesignerReport & { prompt: LlmPrompt; usage: LlmUsage | null }> {
   const prompt = buildDesignerPrompt(req);
-  if (getLlmMode() === "mock") {
+  if (resolveLlmMode(req.mode) === "mock") {
     await simulateLatency(DEFAULT_MOCK_LATENCY_MS * 4);
     return { ...mockDesigner(req), prompt, usage: null };
   }
