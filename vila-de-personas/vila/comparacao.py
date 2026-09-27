@@ -2,13 +2,16 @@
 
 Passo 1, parear (a cada sessão que o M3 manda, ou no fim do teste):
 
-    python -m vila.comparacao parear --sim resultados/sim-XXXX.json --notas dados/notas_teste.csv [--ia]
+    python -m vila.comparacao parear --sim resultados/sim-XXXX.json --notas dados/notas_teste.csv
 
 Gera resultados/pareamento-<sim>.csv com uma linha por dificuldade e uma SUGESTÃO de
 classificação: acerto (vila e pessoas acharam), ponto cego (só as pessoas) ou alarme
-falso (só a vila). Com --ia, o Claude sugere o pareamento; sem, uma regra simples de
-palavras em comum. Em qualquer caso, o time confere CADA linha: abra o CSV, corrija
-a coluna classificacao_final se preciso e escreva "ok" na coluna conferido.
+falso (só a vila), por uma regra simples de palavras em comum. A opção --ia ainda usa
+a API da Anthropic e está desligada desde a troca para a Groq. O time confere CADA
+linha: abra o CSV, corrija a coluna classificacao_final se preciso e escreva "ok" na
+coluna conferido. A vila escreve o mesmo problema com frases diferentes; quando várias
+linhas da mesma versão falam do mesmo problema, deixe a classificação numa só e marque
+as outras como "repetida" (ficam fora da conta, e o resumo diz quantas foram).
 
 Passo 2, resumo (depois de conferir):
 
@@ -46,6 +49,7 @@ from .motor import (
 )
 
 CLASSES = ("acerto", "ponto cego", "alarme falso")
+REPETIDA = "repetida"  # mesmo problema de outra linha já classificada: fica fora da conta
 COLUNAS_NOTAS = ("participante", "versao", "achou", "primeiro_toque", "tempo_s", "dificuldade", "comentario")
 COLUNAS_PAREAMENTO = (
     "versao",
@@ -321,9 +325,12 @@ def resumo(sim: Simulacao, notas: list[Nota], pareamento: Path) -> str:
     conferidas = [l for l in linhas if (l.get("conferido") or "").strip()]
     pendentes = len(linhas) - len(conferidas)
     contagem = Counter((l.get("classificacao_final") or "").strip().lower() for l in conferidas)
-    invalidas = [c for c in contagem if c not in CLASSES]
+    invalidas = [c for c in contagem if c not in (*CLASSES, REPETIDA)]
     if invalidas:
-        raise ErroVila(f"classificacao_final inválida no pareamento: {', '.join(invalidas)}")
+        raise ErroVila(
+            f"classificacao_final inválida no pareamento: {', '.join(invalidas)}. "
+            f"Use {', '.join(CLASSES)} ou {REPETIDA}."
+        )
 
     versoes = [t.versao for t in sim.metadados.telas]
     taxa = []
@@ -366,6 +373,10 @@ def resumo(sim: Simulacao, notas: list[Nota], pareamento: Path) -> str:
         f"- Pontos cegos (só as pessoas): {contagem['ponto cego']}",
         f"- Alarmes falsos (só a vila): {contagem['alarme falso']}",
     ]
+    if contagem[REPETIDA]:
+        texto.append(
+            f"- {contagem[REPETIDA]} linha(s) marcadas como repetidas (mesmo problema de outra linha), fora da conta."
+        )
     if pendentes:
         texto.append(f"- Atenção: {pendentes} linha(s) ainda sem conferir, fora da conta.")
     texto += [
@@ -398,21 +409,27 @@ def main(argv: Optional[list[str]] = None) -> int:
         p.add_argument("--notas", type=Path, default=RAIZ / "dados" / "notas_teste.csv")
         p.add_argument("--pareamento", type=Path, help="padrão: resultados/pareamento-<sim>.csv")
         if nome == "parear":
-            p.add_argument("--ia", action="store_true", help="o Claude sugere o pareamento")
+            p.add_argument("--ia", action="store_true", help="desligada: ainda usa a API da Anthropic")
     args = parser.parse_args(argv)
 
     try:
+        if getattr(args, "ia", False):
+            raise ErroVila(
+                "A opção --ia ainda usa a API da Anthropic e não funciona com a Groq. "
+                "Rode sem --ia: a regra só sugere, e o time confere cada linha."
+            )
         sim = carregar_simulacao(args.sim)
         notas = ler_notas(args.notas)
         destino = args.pareamento or PASTA_RESULTADOS / f"pareamento-{sim.id}.csv"
         if args.comando == "parear":
             vila, pessoas = dificuldades_da_vila(sim), dificuldades_das_pessoas(notas)
-            linhas = parear_com_ia(vila, pessoas) if args.ia else parear_por_regra(vila, pessoas)
+            linhas = parear_por_regra(vila, pessoas)
             gravar_pareamento(linhas, destino)
             contagem = Counter(l.sugestao for l in linhas)
             print(f"Pareamento sugerido em {destino}")
             print("Sugestão (ainda NÃO conferida): " + ", ".join(f"{contagem[c]} {c}" for c in CLASSES))
             print("Confiram cada linha: corrijam classificacao_final se preciso e escrevam 'ok' em conferido.")
+            print(f"Várias linhas da mesma versão com o mesmo problema? Classifique uma e marque as outras como '{REPETIDA}'.")
         else:
             if not destino.exists():
                 raise ErroVila(f"Pareamento não encontrado: {destino}. Rode 'parear' antes.")
